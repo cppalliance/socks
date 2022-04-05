@@ -1,0 +1,35 @@
+#
+# Copyright (c) 2019 Vinnie Falco (vinnie.falco@gmail.com)
+# Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
+#
+# Distributed under the Boost Software License, Version 1.0. (See accompanying
+# file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+#
+# Official repository: https://github.com/alandefreitas/socks_proto
+#
+
+project boost/socks_proto
+    : requirements
+      $(c11-requires)
+      <link>shared:<define>BOOST_SOCKS_PROTO_DYN_LINK=1
+      <link>static:<define>BOOST_SOCKS_PROTO_STATIC_LINK=1
+      <define>BOOST_SOCKS_PROTO_SOURCE
+    : usage-requirements
+      <link>shared:<define>BOOST_SOCKS_PROTO_DYN_LINK=1
+      <link>static:<define>BOOST_SOCKS_PROTO_STATIC_LINK=1
+    : source-location ../src
+    ;
+
+alias socks_proto_sources
+   : src.cpp
+   ;
+
+explicit socks_proto_sources ;
+
+lib boost_socks_proto
+   : socks_proto_sources
+   : requirements
+   : usage-requirements
+   ;
+
+boost-install boost_socks_proto ;

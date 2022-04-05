@@ -1,0 +1,14 @@
+{
+  "key": "socks_proto",
+  "name": "Socks.Proto",
+  "authors": [ "Alan de Freitas" ],
+  "maintainers": [ "Alan de Freitas <alandefreitas@gmail.com>" ],
+  "description": "SOCKS parsing and serialization algorithms using C++11.",
+  "std": [ "proposal" ],
+  "category": [
+    "Parsing",
+    "Networking",
+    "Programming"
+  ],
+  "cxxstd": "11"
+}

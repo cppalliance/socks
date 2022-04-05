@@ -1,0 +1,79 @@
+[/
+    Copyright (c) 2019 Vinnie Falco (vinnie.falco@gmail.com)
+    Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
+
+    Distributed under the Boost Software License, Version 1.0. (See accompanying
+    file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+    Official repository: https://github.com/alandefreitas/socks_proto
+]
+
+[library Boost.Socks.Proto
+    [id socks_proto]
+    [quickbook 1.6]
+    [copyright 2022 Alan de Freitas]
+    [purpose SOCKS Protocol Library]
+    [license
+        Distributed under the Boost Software License, Version 1.0.
+        (See accompanying file LICENSE_1_0.txt or copy at
+        [@http://www.boost.org/LICENSE_1_0.txt])
+    ]
+    [authors [Freitas, Alan]]
+    [category template]
+    [category generic]
+]
+
+[template mdash[] '''&mdash; ''']
+[template indexterm1[term1] '''<indexterm><primary>'''[term1]'''</primary></indexterm>''']
+[template indexterm2[term1 term2] '''<indexterm><primary>'''[term1]'''</primary><secondary>'''[term2]'''</secondary></indexterm>''']
+
+[template include_file[path][^<'''<ulink url="https://github.com/alandefreitas/socks_proto/blob/master/include/'''[path]'''">'''[path]'''</ulink>'''>]]
+[template issue[n] '''<ulink url="https://github.com/alandefreitas/socks_proto/issues/'''[n]'''">#'''[n]'''</ulink>''']
+
+[def __rfc7230__                [@https://tools.ietf.org/html/rfc7230 rfc7230]]
+[/ RFC 1928: SOCKS Protocol Version 5 ]
+[def __rfc1928__                [@https://tools.ietf.org/html/rfc1928 rfc1928]]
+[/ RFC 1929: Username/Password Authentication for SOCKS V5 ]
+[def __rfc1929__                [@https://tools.ietf.org/html/rfc1929 rfc1929]]
+[/ RFC 1961: GSS-API Authentication Method for SOCKS Version 5 ]
+[def __rfc1961__                [@https://tools.ietf.org/html/rfc1961 rfc1961]]
+[/ RFC 3089: A SOCKS-based IPv6/IPv4 Gateway Mechanism ]
+[def __rfc3089__                [@https://tools.ietf.org/html/rfc3089 rfc3089]]
+[/ Koblas, D., "SOCKS", Proceedings: 1992 Usenix Security Symposium ]
+[def __socks4_paper__           [@https://www.usenix.org/legacy/events/sec92/full_papers/koblas.pdf Koblas, David; Koblas, Michelle R. (1992)]]
+[/ Ying-Da Lee. "SOCKS: A protocol for TCP proxy across firewalls". OpenSSH. ]
+[def __socks4__                 [@https://www.openssh.com/txt/socks4.protocol SOCKS Protocol Version 4]]
+[/ Ying-Da Lee. "SOCKS 4A: A Simple Extension to SOCKS 4 Protocol". OpenSSH. ]
+[def __socks4a__                 [@https://www.openssh.com/txt/socks4a.protocol SOCKS Protocol Version 4A]]
+
+[/ Named Requirements ]
+
+[def __Allocator__              [@https://en.cppreference.com/w/cpp/named_req/Allocator ['Allocator]]]
+[def __Copyable__               [@https://en.cppreference.com/w/cpp/concepts/copyable ['Copyable]]]
+[def __CopyAssignable__         [@https://en.cppreference.com/w/cpp/named_req/CopyAssignable ['CopyAssignable]]]
+[def __CopyConstructible__      [@https://en.cppreference.com/w/cpp/named_req/CopyConstructible ['CopyConstructible]]]
+[def __DefaultConstructible__   [@https://en.cppreference.com/w/cpp/named_req/DefaultConstructible ['DefaultConstructible]]]
+[def __Hash__                   [@https://en.cppreference.com/w/cpp/named_req/Hash ['Hash]]]
+[def __InputIterator__          [@https://en.cppreference.com/w/cpp/named_req/InputIterator ['InputIterator]]]
+[def __MoveAssignable__         [@https://en.cppreference.com/w/cpp/named_req/MoveAssignable ['MoveAssignable]]]
+[def __MoveConstructible__      [@https://en.cppreference.com/w/cpp/named_req/MoveConstructible ['MoveConstructible]]]
+[def __SemiRegular__            [@https://en.cppreference.com/w/cpp/concepts/semiregular ['SemiRegular]]]
+[def __Swappable__              [@https://en.cppreference.com/w/cpp/named_req/Swappable ['Swappable]]]
+
+[/ Dingbats ]
+
+[def __good__ [role green \u2714]]
+[def __bad__  [role red   \u2718]]
+
+[/-----------------------------------------------------------------------------]
+
+[include 1.0.overview.qbk]
+
+[section:ref Reference]
+[xinclude quickref.xml]
+[block'''<part label="Two: Reference">''']
+[include reference.qbk]
+[block'''</part>''']
+[endsect]
+
+[xinclude index.xml]

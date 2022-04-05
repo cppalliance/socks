@@ -1,0 +1,90 @@
+[/
+    Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
+
+    Distributed under the Boost Software License, Version 1.0. (See accompanying
+    file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+    Official repository: https://github.com/alandefreitas/socks_proto
+]
+
+[section Overview]
+[block'''<?dbhtml stop-chunking?>''']
+
+[/-----------------------------------------------------------------------------]
+
+Boost.Socks.Proto is a portable, low-level C++ library which provides containers
+and algorithms for implementing the SOCKS protocol described in the documents
+[@https://datatracker.ietf.org/doc/html/rfc1928 SOCKS Protocol Version 5],
+henceforth referred to as __rfc1928__, __socks4__, __socks4a__, and the extensions
+described in __rfc1929__, __rfc1961__, and __rfc3089__.
+
+SOCKS is a protocol to exchanges network packets through a proxy servers. A SOCKS
+server proxies TCP and UDP connections to an arbitrary IP address. SOCKS can be
+used as a circumvention tool to bypass Internet filtering to access content
+otherwise blocked, or to provide similar functionality to a virtual private
+network.
+
+Boost.Socks.Proto offers these features:
+
+* Require only C++11
+* Works without exceptions
+* Fast compilation, no templates
+* Strict compliance with __rfc7230__
+
+[/-----------------------------------------------------------------------------]
+
+[section Requirements]
+
+* Requires Boost and a compiler supporting at least C++11
+* Aliases for standard types use their Boost equivalents
+* Link to a built static or dynamic Boost library, or use header-only (see below)
+* Supports `-fno-exceptions`, detected automatically
+
+The library requires Boost and a compiler supporting at least C++11. Aliases for standard types, such as __string_view__, use their Boost equivalents.
+
+[#header-only]
+[heading Header-Only]
+
+To use the library as header-only; that is, to eliminate the requirement to
+link a program to a static or dynamic Boost.Socks.Proto library, simply
+place the following line in exactly one new or existing source
+file in your project.
+
+[c++]
+```
+    #include <boost/socks_proto/src.hpp>
+```
+
+[#embedded-devices]
+[heading Embedded]
+
+Boost.URL works great on embedded devices. It can be used in a
+way that avoids all dynamic memory allocations. Furthermore it
+is designed to work without exceptions if desired.
+
+[endsect]
+
+[/-----------------------------------------------------------------------------]
+
+[section Supported Compilers]
+
+Boost.Socks.Proto has been tested with the following compilers:
+
+* clang: 3.8, 4, 5, 6, 7, 8, 9, 10, 11, 12
+* gcc: 4.8, 4.9, 5, 6, 7, 8, 9, 10, 11
+* msvc: 14.0, 14.1, 14.2, 14.3
+
+[h3 Quality Assurance]
+
+The development infrastructure for the library includes
+these per-commit analyses:
+
+* Coverage reports
+* Compilation and tests on Drone.io, Azure Pipelines, Appveyor
+* Fuzzing using clang-llvm and machine learning
+
+[endsect]
+
+[/-----------------------------------------------------------------------------]
+
+[endsect]

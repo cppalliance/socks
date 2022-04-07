@@ -16,6 +16,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstdlib>
+#include <cstdio>
 #include <cstring>
 #include <cctype>
 #include <iomanip>

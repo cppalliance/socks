@@ -100,6 +100,7 @@ explicit socks_proto_doc ;
 install treeimages
     :
         [ glob $(broot)/doc/src/images/*.png ]
+        images/doc-logo.png
     :
         <location>$(out)/html/images
     ;
@@ -120,8 +121,8 @@ boostbook socks_proto
         <xsl:param>nav.layout=none
         <xsl:param>boost.image.src=images/doc-logo.png
         <xsl:param>boost.image.alt="Boost.Socks.Proto Logo"
-        <xsl:param>boost.image.w=1050
-        <xsl:param>boost.image.h=80
+        <xsl:param>boost.image.w=277
+        <xsl:param>boost.image.h=86
         <xsl:param>boost.graphics.root=images/
         <xsl:param>html.stylesheet=boostbook.css
         <xsl:param>chapter.autolabel=1

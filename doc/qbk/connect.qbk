@@ -1,0 +1,82 @@
+[/
+    Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
+
+    Distributed under the Boost Software License, Version 1.0. (See accompanying
+    file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+    Official repository: https://github.com/alandefreitas/socks_proto
+]
+
+[/-----------------------------------------------------------------------------]
+
+[section Connect]
+
+[heading Connect Request]
+
+Once connected to the SOCKS server, the client can send a CONNECT request
+to establish a connection to an application server. The client
+includes the IP address and the port number of the destination host,
+and a userid, in the following format:
+
+[teletype]
+```
+    +----+----+----+----+----+----+----+----+----+----+....+----+
+    | VN | CD | DSTPORT |      DSTIP        | USERID       |NULL|
+    +----+----+----+----+----+----+----+----+----+----+....+----+
+       1    1      2              4           variable       1
+```
+
+where:
+
+# `VN`: SOCKS protocol version number (1 byte)
+# `CD`: Command code `1` for CONNECT request
+# `DSTIP`: Destination port number (2 bytes)
+# `DSTIP`: Destination IPv4 address (4 bytes)
+# `USERID`: A __rfc1413__ user id
+# `NULL`: The `\0` character
+
+[heading Connect Response]
+
+If the SOCKS server grants the request, it makes a connection to the
+specified port of the destination host. A reply packet is sent to the
+client when this connection is established, or when the request is
+rejected or the operation fails.
+
+[teletype]
+```
+    +----+----+----+----+----+----+----+----+
+    | VN | CD | DSTPORT |      DSTIP        |
+    +----+----+----+----+----+----+----+----+
+       1    1      2              4
+```
+
+where:
+
+# `VN`: Version of the reply code (always `0`)
+# `CD`: The result code
+# `DSTPORT`: Ignored
+# `DSTIP`: Ignored
+
+The result code `CD` might have one of the following values.
+
+# 90: request granted
+# 91: request rejected or failed
+# 92: request rejected because SOCKS server cannot connect to  `identd` on the client
+# 93: request rejected because the client program and `identd` report different user-ids
+
+If the request failed, the SOCKS server closes its connection immediately
+after notifying the client with codes 91, 92, or 93.
+
+When the request is successful, the SOCKS server starts relaying traffic
+on both directions. Thus, the client can now perform I/O operations on
+the same connection as if it were directly connected to the application
+server.
+
+For the `CONNECT` operation, the server sets a time limit of 2 minutes
+for the establishment of its connection with the application server.
+If the connection is still not established when the time limit expires,
+the server closes its connection to the client and gives up.
+
+[/-----------------------------------------------------------------------------]
+
+[endsect]

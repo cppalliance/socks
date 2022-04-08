@@ -15,11 +15,8 @@
   <tgroup cols="4">
     <colspec colname="a"/><colspec colname="b"/><colspec colname="c"/><colspec colname="d"/>
     <thead><row>
-      <entry valign="center" namest="a" nameend="c">
-        <bridgehead renderas="sect2">HTTP</bridgehead>
-      </entry>
-      <entry valign="center" namest="d" nameend="d">
-        <bridgehead renderas="sect2">Encoding</bridgehead>
+      <entry valign="center" namest="a" nameend="d">
+        <bridgehead renderas="sect2">Socks</bridgehead>
       </entry>
     </row></thead>
     <tbody><row>
@@ -35,30 +32,35 @@
       <entry valign="top">
         <bridgehead renderas="sect3">Functions</bridgehead>
         <simplelist type="vert" columns="1">
-        </simplelist>
-        <bridgehead renderas="sect3">Operators</bridgehead>
-        <simplelist type="vert" columns="1">
+          <member><link linkend="socks_proto.ref.boost__socks_proto__to_status">to_status</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__to_string">to_string</link></member>
         </simplelist>
       </entry>
+
       <entry valign="top">
-        <bridgehead renderas="sect3">Aliases</bridgehead>
-        <simplelist type="vert" columns="1">
-        </simplelist>
         <bridgehead renderas="sect3">Constants</bridgehead>
         <simplelist type="vert" columns="1">
+          <member><link linkend="socks_proto.ref.boost__socks_proto__status">status</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__version">version</link></member>
         </simplelist>
       </entry>
+
       <entry valign="top">
-        <bridgehead renderas="sect3">Functions</bridgehead>
+        <bridgehead renderas="sect3">Operators</bridgehead>
         <simplelist type="vert" columns="1">
+          <member><link linkend="socks_proto.ref.boost__socks_proto__operator_lt__lt_">operator&lt;&lt;</link></member>
         </simplelist>
-        <bridgehead renderas="sect3">Types</bridgehead>
+        <bridgehead renderas="sect3">Aliases</bridgehead>
         <simplelist type="vert" columns="1">
-        </simplelist>
-        <bridgehead renderas="sect3">Concepts</bridgehead>
-        <simplelist type="vert" columns="1">
+          <member><link linkend="socks_proto.ref.boost__socks_proto__byte">byte</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__error_category">error_category</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__error_code">error_code</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__error_condition">error_condition</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__string_view">string_view</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__system_error">system_error</link></member>
         </simplelist>
       </entry>
+
     </row></tbody>
   </tgroup>
 </informaltable>

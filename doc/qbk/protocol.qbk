@@ -1,0 +1,44 @@
+[/
+    Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
+
+    Distributed under the Boost Software License, Version 1.0. (See accompanying
+    file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+    Official repository: https://github.com/CPPAlliance/url
+]
+
+[heading SOCKS4]
+
+SOCKS4 was developed by David Koblas and Michelle Koblas
+(__socks4_paper__). The most common specification and implementation
+was introduced by Ying-Da Lee (__socks4__).
+
+The protocol allows transparent access across the firewall, where the
+server data between the client and the server with minimum processing
+overhead. In practice, SOCKS4 servers can proxy TCP connections to any
+IP address.
+
+This means SOCKS performs at the session layer 5 of the OSI model.
+Thus, the SOCKS server does not have to know anything about the
+application protocol. This also makes it easy to accommodate encryption
+to protect the traffic from snoopers.
+
+Once the client is connected to the SOCKS server, only two operations
+are defined in __socks4__:
+
+# `CONNECT`: Establishes a proxy connection to the application server
+# `BIND`: Prepare for an inbound connection from the application server
+
+[heading SOCKS4A]
+
+__socks4a__ extends the __socks4__ protocol to allow a client to specify
+a destination domain name rather than an IP address.
+
+This is useful when the client cannot resolve the destination host's
+domain name to an IP address.
+
+[heading SOCKS5]
+
+SOCKS5 (__rfc1928__) provides optional authentication so that only authorized
+users can access a SOCKS server. Besides proxying TCP connections, SOCKS5
+provides a means for UDP packets to be forwarded.

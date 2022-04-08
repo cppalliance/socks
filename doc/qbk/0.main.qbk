@@ -30,15 +30,16 @@
 [template include_file[path][^<'''<ulink url="https://github.com/alandefreitas/socks_proto/blob/master/include/'''[path]'''">'''[path]'''</ulink>'''>]]
 [template issue[n] '''<ulink url="https://github.com/alandefreitas/socks_proto/issues/'''[n]'''">#'''[n]'''</ulink>''']
 
-[def __rfc7230__                [@https://tools.ietf.org/html/rfc7230 rfc7230]]
 [/ RFC 1928: SOCKS Protocol Version 5 ]
-[def __rfc1928__                [@https://tools.ietf.org/html/rfc1928 rfc1928]]
+[def __rfc1928__                [@https://tools.ietf.org/html/rfc1928 RFC 1928]]
 [/ RFC 1929: Username/Password Authentication for SOCKS V5 ]
-[def __rfc1929__                [@https://tools.ietf.org/html/rfc1929 rfc1929]]
+[def __rfc1929__                [@https://tools.ietf.org/html/rfc1929 RFC 1929]]
 [/ RFC 1961: GSS-API Authentication Method for SOCKS Version 5 ]
-[def __rfc1961__                [@https://tools.ietf.org/html/rfc1961 rfc1961]]
+[def __rfc1961__                [@https://tools.ietf.org/html/rfc1961 RFC 1961]]
 [/ RFC 3089: A SOCKS-based IPv6/IPv4 Gateway Mechanism ]
-[def __rfc3089__                [@https://tools.ietf.org/html/rfc3089 rfc3089]]
+[def __rfc3089__                [@https://tools.ietf.org/html/rfc3089 RFC 3089]]
+[/ RFC 1413: Identification Protocol ]
+[def __rfc1413__                [@https://tools.ietf.org/html/rfc1413 RFC 1413]]
 [/ Koblas, D., "SOCKS", Proceedings: 1992 Usenix Security Symposium ]
 [def __socks4_paper__           [@https://www.usenix.org/legacy/events/sec92/full_papers/koblas.pdf Koblas, David; Koblas, Michelle R. (1992)]]
 [/ Ying-Da Lee. "SOCKS: A protocol for TCP proxy across firewalls". OpenSSH. ]
@@ -60,6 +61,8 @@
 [def __SemiRegular__            [@https://en.cppreference.com/w/cpp/concepts/semiregular ['SemiRegular]]]
 [def __Swappable__              [@https://en.cppreference.com/w/cpp/named_req/Swappable ['Swappable]]]
 
+[def __string_view__            [link socks_proto.ref.boost__socks_proto__string_view `string_view`]]
+
 [/ Dingbats ]
 
 [def __good__ [role green \u2714]]
@@ -68,6 +71,12 @@
 [/-----------------------------------------------------------------------------]
 
 [include 1.0.overview.qbk]
+
+[section Protocol]
+[include protocol.qbk]
+[include connect.qbk]
+[include bind.qbk]
+[endsect]
 
 [section:ref Reference]
 [xinclude quickref.xml]

@@ -32,14 +32,14 @@ enum class status : uint8_t
     unknown                             = 0xFF,
 };
 
-/** Converts the integer to a known status-code.
+/** Converts an integer to a known status-code.
 
     If the integer does not match a known status code,
     @ref status::unknown is returned.
 */
 BOOST_SOCKS_PROTO_DECL
 status
-int_to_status(unsigned v);
+to_status(unsigned v);
 
 /** Returns status code as a string.
 
@@ -49,7 +49,7 @@ BOOST_SOCKS_PROTO_DECL
 string_view
 to_string(status v);
 
-/// Outputs the standard reason phrase of a status code to a stream.
+/// Outputs the status code as a string to a stream.
 BOOST_SOCKS_PROTO_DECL
 std::ostream&
 operator<<(std::ostream&, status);

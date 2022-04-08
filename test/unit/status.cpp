@@ -24,7 +24,7 @@ public:
     {
         auto const check = [&](status s, int i)
             {
-                BOOST_TEST(int_to_status(i) == s);
+                BOOST_TEST(to_status(i) == s);
             };
         check(status::request_granted, 0x00);
         check(status::general_failure, 0x01);
@@ -37,7 +37,7 @@ public:
         check(status::address_type_not_supported, 0x08);
         check(status::unknown, 0xFF);
 
-        BOOST_TEST(int_to_status(0x09) == status::unknown);
+        BOOST_TEST(to_status(0x09) == status::unknown);
 
         auto const good =
             [&](status v)

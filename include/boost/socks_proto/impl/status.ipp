@@ -18,7 +18,7 @@ namespace boost {
 namespace socks_proto {
 
 status
-int_to_status(unsigned v)
+to_status(unsigned v)
 {
     switch(static_cast<status>(v))
     {

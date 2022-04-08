@@ -1,0 +1,96 @@
+[/
+    Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
+
+    Distributed under the Boost Software License, Version 1.0. (See accompanying
+    file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+    Official repository: https://github.com/alandefreitas/socks_proto
+]
+
+[/-----------------------------------------------------------------------------]
+
+[section Bind]
+
+[heading Bind Request]
+
+After CONNECT request has been granted, the client can send a BIND request
+to prepare for inbound connections from the application server. The client
+will usually listen to calls from the application on a new socket, and
+use the existing primary connection created with CONNECT to inform the
+application server about its new socket's IP address and PORT number.
+
+The client includes the IP address and the port number of the destination host,
+and a userid, in the following format:
+
+[teletype]
+```
+    +----+----+----+----+----+----+----+----+----+----+....+----+
+    | VN | CD | DSTPORT |      DSTIP        | USERID       |NULL|
+    +----+----+----+----+----+----+----+----+----+----+....+----+
+       1    1      2              4           variable       1
+```
+
+where:
+
+# `VN`: SOCKS protocol version number (1 byte)
+# `CD`: Command code `2` for BIND request
+# `DSTIP`: Destination port number (2 bytes)
+# `DSTIP`: Destination IPv4 address (4 bytes)
+# `USERID`: A __rfc1413__ user id
+# `NULL`: The `\0` character
+
+[heading Bind Response]
+
+A reply packet is sent to the client:
+
+[teletype]
+```
+    +----+----+----+----+----+----+----+----+
+    | VN | CD | DSTPORT |      DSTIP        |
+    +----+----+----+----+----+----+----+----+
+       1    1      2              4
+```
+
+where:
+
+# `VN`: Version of the reply code (always `0`)
+# `CD`: The result code
+# `DSTPORT`: Destination port to be used by the application server
+# `DSTIP`: Destination IP to be used by the application server
+
+As with `CONNECT`, the result code `CD` might have one of the following values.
+
+# 90: request granted
+# 91: request rejected or failed
+# 92: request rejected because SOCKS server cannot connect to  `identd` on the client
+# 93: request rejected because the client program and `identd` report different user-ids
+
+If the request failed, the SOCKS server closes its connection immediately
+after notifying the client with codes 91, 92, or 93.
+
+When the request is successful, the server obtains its own socket to wait
+for incoming connections from the application server. The information about
+this socket is sent to the client through `DSTPORT` and `DSTIP` so that
+the client can use it in communications with the application server.
+When the `DSTIP` is `INADDR_ANY` = `0`, the client should replace it with
+the IP address of the SOCKS server.
+
+When the connection from the application server is established, the SOCKS
+server sends a second response to the client. If the host that connected
+to the SOCKS server does not match the application host specified in
+the `BIND` request, the `CD` field is set to `91`, and both connections
+are closed.
+
+If the host matches the application server, the SOCKS server
+starts to relay traffic on both connections. Thus, the client can
+now perform I/O operations on the same connection as if it were
+directly connected to the application server.
+
+For the `BIND` operation, the server sets a time limit of 2 minutes
+for the establishment of its connection with the application server.
+If the connection is still not established when the time limit expires,
+the server closes its connection to the client and gives up.
+
+[/-----------------------------------------------------------------------------]
+
+[endsect]

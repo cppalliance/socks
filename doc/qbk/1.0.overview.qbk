@@ -29,7 +29,7 @@ Boost.Socks.Proto offers these features:
 * Require only C++11
 * Works without exceptions
 * Fast compilation, no templates
-* Strict compliance with __rfc7230__
+* Strict compliance with __rfc1928__
 
 [/-----------------------------------------------------------------------------]
 
@@ -45,15 +45,24 @@ The library requires Boost and a compiler supporting at least C++11. Aliases for
 [#header-only]
 [heading Header-Only]
 
-To use the library as header-only; that is, to eliminate the requirement to
-link a program to a static or dynamic Boost.Socks.Proto library, simply
-place the following line in exactly one new or existing source
-file in your project.
+To use Boost.Socks.Proto as header-only; that is, to eliminate the requirement to link a program to a static or dynamic
+Boost.Socks.Proto library, place the following line in [*exactly one] new or existing source file in your project.
 
 [c++]
 ```
     #include <boost/socks_proto/src.hpp>
 ```
+
+[note
+    This "header-only" configuration needs `BOOST_SOCKS_PROTO_NO_LIB` defined when building with compilers supporting
+    auto-linking, such as Microsoft Visual C++. This macro will instruct Boost to deactivate auto-linking:
+
+    [c++]
+    ```
+        #define BOOST_SOCKS_PROTO_NO_LIB
+        #include <boost/socks_proto.hpp>
+    ```
+]
 
 [#embedded-devices]
 [heading Embedded]
@@ -81,7 +90,6 @@ these per-commit analyses:
 
 * Coverage reports
 * Compilation and tests on Drone.io, Azure Pipelines, Appveyor
-* Fuzzing using clang-llvm and machine learning
 
 [endsect]
 

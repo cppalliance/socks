@@ -19,9 +19,15 @@ project
     ;
 
 local SOURCES =
+    address_type.cpp
+    auth_method.cpp
+    command.cpp
     error.cpp
     socks_proto.cpp
-    status.cpp
+    reply_code.cpp
+    reply_code_v4.cpp
+    reply_view.cpp
+    request_view.cpp
     string_view.cpp
     test_helpers.cpp
     test_helpers.hpp

@@ -1,0 +1,89 @@
+[/
+    Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
+
+    Distributed under the Boost Software License, Version 1.0. (See accompanying
+    file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+    Official repository: https://github.com/alandefreitas/socks_proto
+]
+
+[/-----------------------------------------------------------------------------]
+
+[#greeting]
+[section Greeting]
+
+[heading Client Greeting]
+
+The SOCKS5 procedure for TCP-based clients start with a TCP connection
+to the SOCKS server. By convention, the SOCKS service is located on
+TCP port `1080`. If the connection succeeds, the client sends a
+`GREETING` packet to negotiate an authentication method.
+
+[note
+    While the `GREETING` packet is the first message to be sent to a
+    SOCKS5 server, a SOCKS4 server should start the procedure directly
+    with a [link connect `CONNECT` request].
+]
+
+Once connected to the SOCKS server, the client can send a GREETING
+to establish a connection to an application server:
+
+[teletype]
+```
+    +----+----------+----------+
+    |VER | NMETHODS | METHODS  |
+    +----+----------+----------+
+      1       1        1-255
+```
+
+where:
+
+# `VER`: SOCKS protocol version number (1 byte: always `0x05`)
+# `NMETHODS`: Number of method identifiers in `METHODS` (1 byte)
+# `METHODS`: List of authentication methods supported by the client
+
+The authentication methods are the following:
+
+# `0x00`: No authentication
+# `0x01`: GSSAPI (__rfc1961__)
+# `0x02`: Username/password (__rfc1929__)
+# `0x03`–`0x7F`: methods assigned by IANA[11]
+    # `0x03`: Challenge-Handshake Authentication Protocol
+    # `0x04`: Unassigned
+    # `0x05`: Challenge-Response Authentication Method
+    # `0x06`: Secure Sockets Layer
+    # `0x07`: NDS Authentication
+    # `0x08`: Multi-Authentication Framework
+    # `0x09`: JSON Parameter Block
+    # `0x0A`–`0x7F`: Unassigned
+# `0x80`–`0xFE`: methods reserved for private use
+# `0xFF`: No acceptable method (reserved for served reply)
+
+All SOCKS implementations should support the GSSAPI and
+Username/Password methods.
+
+[heading Server Choice]
+
+The SOCKS server evaluates the `GREETING` request, and either establishes
+the appropriate connection or denies it through a `METHOD` selection
+message.
+
+[teletype]
+```
+    +----+--------+
+    |VER | METHOD |
+    +----+--------+
+      1      1
+```
+
+where:
+
+# `VER`: SOCKS protocol version number (1 byte: always `0x05`)
+# `METHOD`: The response code
+
+If the `METHOD` field is `0xFF` (No acceptable method), the
+client must clone the connection. For any other method,
+the client and server should enter a method-specific
+sub-negotiation.
+
+[endsect]

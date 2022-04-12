@@ -11,8 +11,17 @@
 #ifndef BOOST_SOCKS_PROTO_HPP
 #define BOOST_SOCKS_PROTO_HPP
 
+#include <boost/socks_proto/address_type.hpp>
+#include <boost/socks_proto/auth_method.hpp>
+#include <boost/socks_proto/byte.hpp>
+#include <boost/socks_proto/byte_view.hpp>
+#include <boost/socks_proto/command.hpp>
 #include <boost/socks_proto/error.hpp>
-#include <boost/socks_proto/status.hpp>
+#include <boost/socks_proto/reply_code.hpp>
+#include <boost/socks_proto/reply_code_v4.hpp>
+#include <boost/socks_proto/reply_view.hpp>
+#include <boost/socks_proto/request_view.hpp>
+#include <boost/socks_proto/src.hpp>
 #include <boost/socks_proto/string_view.hpp>
 #include <boost/socks_proto/version.hpp>
 

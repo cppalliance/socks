@@ -1,5 +1,4 @@
 //
-// Copyright (c) 2019 Vinnie Falco (vinnie.falco@gmail.com)
 // Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -8,32 +7,35 @@
 // Official repository: https://github.com/CPPAlliance/http_proto
 //
 
-#ifndef BOOST_SOCKS_PROTO_IMPL_VERSION_IPP
-#define BOOST_SOCKS_PROTO_IMPL_VERSION_IPP
+#ifndef BOOST_SOCKS_PROTO_IMPL_COMMAND_IPP
+#define BOOST_SOCKS_PROTO_IMPL_COMMAND_IPP
 
-#include <boost/socks_proto/version.hpp>
+#include <boost/socks_proto/command.hpp>
 #include <ostream>
 
 namespace boost {
 namespace socks_proto {
 
 string_view
-to_string(version v) noexcept
+to_string(command v) noexcept
 {
     switch(v)
     {
-    case version::socks_4:
-        return "SOCKS/4.0";
+    case command::connect:
+        return "CONNECT";
+    case command::bind:
+        return "BIND";
+    case command::udp_associate:
+        return "UDP ASSOCIATE";
     default:
-    case version::socks_5:
-        return "SOCKS/5.0";
+        return "UNSUPPORTED";
     }
 }
 
 std::ostream&
 operator<<(
     std::ostream& os,
-    version v)
+    command v)
 {
     os << to_string(v);
     return os;

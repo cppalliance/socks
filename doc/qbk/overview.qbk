@@ -18,11 +18,12 @@ and algorithms for implementing the SOCKS protocol described in the documents
 henceforth referred to as __rfc1928__, __socks4__, __socks4a__, and the extensions
 described in __rfc1929__, __rfc1961__, and __rfc3089__.
 
-SOCKS is a protocol to exchanges network packets through a proxy servers. A SOCKS
+SOCKS is a protocol to exchange network packets through a proxy servers. A SOCKS
 server proxies TCP and UDP connections to an arbitrary IP address. SOCKS can be
 used as a circumvention tool to bypass Internet filtering to access content
 otherwise blocked, or to provide similar functionality to a virtual private
-network.
+network. The SOCKS5 protocol also provides authentication for this network
+traversal in __rfc1928__.
 
 Boost.Socks.Proto offers these features:
 

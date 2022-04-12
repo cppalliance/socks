@@ -88,7 +88,7 @@ explicit images ;
 
 xml socks_proto_doc
     :
-        qbk/0.main.qbk
+        qbk/main.qbk
     :
         <dependency>reference.qbk
         <dependency>images

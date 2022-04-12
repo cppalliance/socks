@@ -70,12 +70,13 @@
 
 [/-----------------------------------------------------------------------------]
 
-[include 1.0.overview.qbk]
+[include overview.qbk]
 
 [section Protocol]
 [include protocol.qbk]
-[include connect.qbk]
-[include bind.qbk]
+[include greeting.qbk]
+[include authentication.qbk]
+[include requests_and_replies.qbk]
 [endsect]
 
 [section:ref Reference]

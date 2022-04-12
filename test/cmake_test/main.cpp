@@ -7,5 +7,5 @@
 
 int main()
 {
-    return static_cast<int>(boost::socks_proto::status::request_granted);
+    return static_cast<int>(boost::socks_proto::reply_code::succeeded);
 }

@@ -9,19 +9,19 @@
 //
 
 // Test that header file is self-contained.
-#include <boost/socks_proto/version.hpp>
+#include <boost/socks_proto/address_type.hpp>
 #include <sstream>
 #include "test_suite.hpp"
 
 namespace boost {
 namespace socks_proto {
 
-class version_test
+class address_type_test
 {
 public:
     static
     void
-    check(version v, string_view s)
+    check(address_type v, string_view s)
     {
         std::stringstream ss;
         ss << v;
@@ -31,14 +31,15 @@ public:
     void
     run()
     {
-        check(version::socks_4, "SOCKS/4.0");
-        check(version::socks_5, "SOCKS/5.0");
+        check(address_type::ip_v4, "IPv4");
+        check(address_type::domain_name, "Domain name");
+        check(address_type::ip_v6, "IPv6");
     }
 };
 
 TEST_SUITE(
-    version_test,
-    "boost.socks_proto.version");
+    address_type_test,
+    "boost.socks_proto.address_type");
 
 } // socks_proto
 } // boost

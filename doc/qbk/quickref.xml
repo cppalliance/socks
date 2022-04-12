@@ -23,6 +23,8 @@
       <entry valign="top">
         <bridgehead renderas="sect3">Classes</bridgehead>
         <simplelist type="vert" columns="1">
+          <member><link linkend="socks_proto.ref.boost__socks_proto__reply_view">reply_view</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__request_view">request_view</link></member>
         </simplelist>
         <bridgehead renderas="sect3">Type Traits</bridgehead>
         <simplelist type="vert" columns="1">
@@ -32,7 +34,8 @@
       <entry valign="top">
         <bridgehead renderas="sect3">Functions</bridgehead>
         <simplelist type="vert" columns="1">
-          <member><link linkend="socks_proto.ref.boost__socks_proto__to_status">to_status</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__to_reply_code">to_reply_code</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__to_reply_code_v4">to_reply_code_v4</link></member>
           <member><link linkend="socks_proto.ref.boost__socks_proto__to_string">to_string</link></member>
         </simplelist>
       </entry>
@@ -40,7 +43,11 @@
       <entry valign="top">
         <bridgehead renderas="sect3">Constants</bridgehead>
         <simplelist type="vert" columns="1">
-          <member><link linkend="socks_proto.ref.boost__socks_proto__status">status</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__address_type">address_type</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__auth_method">auth_method</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__command">command</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__reply_code">reply_code</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__reply_code_v4">reply_code_v4</link></member>
           <member><link linkend="socks_proto.ref.boost__socks_proto__version">version</link></member>
         </simplelist>
       </entry>
@@ -53,6 +60,7 @@
         <bridgehead renderas="sect3">Aliases</bridgehead>
         <simplelist type="vert" columns="1">
           <member><link linkend="socks_proto.ref.boost__socks_proto__byte">byte</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__byte_view">byte_view</link></member>
           <member><link linkend="socks_proto.ref.boost__socks_proto__error_category">error_category</link></member>
           <member><link linkend="socks_proto.ref.boost__socks_proto__error_code">error_code</link></member>
           <member><link linkend="socks_proto.ref.boost__socks_proto__error_condition">error_condition</link></member>

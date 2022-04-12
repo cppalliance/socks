@@ -9,60 +9,176 @@
 
 [/-----------------------------------------------------------------------------]
 
+[#connect]
 [section Connect]
 
-[heading Connect Request]
+Once connected to the SOCKS server, the client can send a `CONNECT` request
+to establish a connection to an application server. This request has different
+format in the SOCKS4 and SOCKS5 protocols. The first byte in such a request
+can be used to differentiate the protocol version.
 
-Once connected to the SOCKS server, the client can send a CONNECT request
-to establish a connection to an application server. The client
-includes the IP address and the port number of the destination host,
-and a userid, in the following format:
+[note
+    While the `CONNECT` packet is the first message to be sent from a
+    SOCKS4 client, a SOCKS5 client should start with a
+    [link greeting `GREETING` request].
+]
+
+[heading SOCKS5 Connect Request]
+
+Once the authentication negotiation has completed successfully, the
+following `CONNECT` request should be encapsulated according to the
+authentication method with the following format:
 
 [teletype]
 ```
-    +----+----+----+----+----+----+----+----+----+----+....+----+
-    | VN | CD | DSTPORT |      DSTIP        | USERID       |NULL|
-    +----+----+----+----+----+----+----+----+----+----+....+----+
-       1    1      2              4           variable       1
+        +----+-----+-------+------+----------+----------+
+        |VER | CMD |  RSV  | ATYP | DST.ADDR | DST.PORT |
+        +----+-----+-------+------+----------+----------+
+          1     1    `0x00`    1     Variable      2
 ```
 
 where:
 
-# `VN`: SOCKS protocol version number (1 byte)
-# `CD`: Command code `1` for CONNECT request
+# `VER`: `0x05` SOCKS protocol version number
+# `CMD`: Command code `0x01` for `CONNECT` request
+# `RSV`: RESERVED
+# `ATYP`: Destination address type
+# `DST.ADDR`: Destination address
+# `DST.PORT`: Destination port
+
+[heading Destination address]
+
+The valid destination addresses types `ATYP` are the following:
+
+# `0x01`: IP V4 address (`DST.ADDR` length is 4 octets)
+# `0x03`: Domain name
+# `0x04`: IP V6 address (`DST.ADDR` length is 16 octets)
+
+If `ATYP` represents a domain name, the first octet of `DST.ADDR` determines
+its length. `DST.ADDR` should have no terminating `NULL` octet.
+
+[heading SOCKS4 Connect Request]
+
+The client includes the IP address and the port number of the destination host,
+and a userid, in the following format:
+
+[teletype]
+```
+    +-----+-----+----+----+----+----+----+----+----+----+....+----+
+    | VER | CMD | DSTPORT |      DSTIP        | USERID       |NULL|
+    +-----+-----+----+----+----+----+----+----+----+----+....+----+
+       1     1       2              4           variable       1
+```
+
+where:
+
+# `VER`: `0x04` SOCKS protocol version number (1 byte)
+# `CMD`: Command code `0x01` for `CONNECT` request
 # `DSTIP`: Destination port number (2 bytes)
 # `DSTIP`: Destination IPv4 address (4 bytes)
 # `USERID`: A __rfc1413__ user id
 # `NULL`: The `\0` character
 
-[heading Connect Response]
+[heading SOCKS4A Domain names]
+
+In __socks4a__, a `CONNECT` request can also include the application server
+domain name instead of relying on its IP address. In that case, `DSTIP`
+should consist of three `NULL` bytes and a non-zero value.
+
+The corresponding IP address in `DSTIP` (`0.0.0.x`) becomes inadmissible
+and the application domain name should be attached after the `NULL` byte,
+with its own `NULL` byte.
+
+[teletype]
+```
+    +-----+-----+----+----+----+----+----+----+----+----+....+----+----+----+....+----+
+    | VER | CMD | DSTPORT |       DSTIP       | USERID       |NULL|  DOMAIN      |NULL|
+    |     |     |         |NULL|NULL|NULL|[^0]|              |    |              |    |
+    +-----+-----+----+----+----+----+----+----+----+----+....+----+----+----+....+----+
+       1     1       2              4           variable       1    variable       1
+```
+
+This is useful when the client cannot resolve the destination host's
+domain name to find its IP address. When `DSTIP` represents an invalid
+IP address, the server should resolve the domain name before proxying
+the requests.
+
+[heading Connect Reply]
 
 If the SOCKS server grants the request, it makes a connection to the
 specified port of the destination host. A reply packet is sent to the
 client when this connection is established, or when the request is
 rejected or the operation fails.
 
+[heading SOCKS5 Connect Reply]
+
 [teletype]
 ```
-    +----+----+----+----+----+----+----+----+
-    | VN | CD | DSTPORT |      DSTIP        |
-    +----+----+----+----+----+----+----+----+
-       1    1      2              4
+    +----+-----+-------+------+----------+----------+
+    |VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |
+    +----+-----+-------+------+----------+----------+
+      1     1    `0x00`    1     Variable      2
 ```
 
 where:
 
-# `VN`: Version of the reply code (always `0`)
-# `CD`: The result code
+# `VER`: SOCKS Protocol Version: `0x05`
+# `REP`: Reply field
+# `RSV`: RESERVED (`0x00`)
+# `ATYP`: Address type
+# `BND.ADDR`: Server bound address
+# `BND.PORT`: Server bound port
+
+The code `REP` might have one of the following values:
+
+# `0x00`: succeeded
+# `0x01`: general SOCKS server failure
+# `0x02`: connection not allowed by ruleset
+# `0x03`: Network unreachable
+# `0x04`: Host unreachable
+# `0x05`: Connection refused
+# `0x06`: TTL expired
+# `0x07`: Command not supported
+# `0x08`: Address type not supported
+# `0x09` to `0xFF`: unassigned
+
+When a reply from the SOCKS server indicates a failure, the SOCKS server
+*MUST* terminate the TCP connection immediately after sending the reply.
+
+If the reply code to a `CONNECT` request indicates a success (`REP` is `0x00`),
+the client may now start passing data.
+
+`BND.ADDR` and `BND.PORT` contain the address and port the SOCKS server
+assigned to connect to the target host. Because SOCKS servers might be
+multi-homed, `BND.ADDR` might be different from the address the client
+used to reach the SOCKS server.
+
+[heading SOCKS4 Connect Reply]
+
+[teletype]
+```
+    +-----+-----+----+----+----+----+----+----+
+    | VER | REP | DSTPORT |      DSTIP        |
+    +-----+-----+----+----+----+----+----+----+
+       1     1      2              4
+```
+
+where:
+
+# `VER`: Version of the reply code (always `0`)
+# `REP`: The response code
 # `DSTPORT`: Ignored
 # `DSTIP`: Ignored
 
-The result code `CD` might have one of the following values.
+The code `REP` might have one of the following values.
 
 # 90: request granted
 # 91: request rejected or failed
-# 92: request rejected because SOCKS server cannot connect to  `identd` on the client
+# 92: request rejected because SOCKS server cannot connect to `identd` on the client
 # 93: request rejected because the client program and `identd` report different user-ids
+
+Note that, unlike SOCKS5, the __socks4__ determines the fields `DSTPORT`
+and `DSTIP` are ignored.
 
 If the request failed, the SOCKS server closes its connection immediately
 after notifying the client with codes 91, 92, or 93.
@@ -76,6 +192,15 @@ For the `CONNECT` operation, the server sets a time limit of 2 minutes
 for the establishment of its connection with the application server.
 If the connection is still not established when the time limit expires,
 the server closes its connection to the client and gives up.
+
+[heading SOCKS4 Identification]
+
+[/ https://en.wikipedia.org/wiki/Ident_protocol ]
+[/ https://datatracker.ietf.org/doc/html/rfc1413 ]
+
+[heading IPv6/IPv4 Gateway]
+
+[/ https://datatracker.ietf.org/doc/html/rfc3089 ]
 
 [/-----------------------------------------------------------------------------]
 

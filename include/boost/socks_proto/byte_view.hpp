@@ -12,13 +12,14 @@
 #define BOOST_SOCKS_PROTO_STRING_VIEW_HPP
 
 #include <boost/socks_proto/detail/config.hpp>
+#include <boost/socks_proto/byte.hpp>
 #include <boost/core/detail/string_view.hpp>
 
 namespace boost {
 namespace socks_proto {
 
-/// Type used to represent string views
-using string_view = boost::core::string_view;
+/// The type used to reference constant sequences of bytes
+using byte_view = boost::core::basic_string_view<byte>;
 
 } // socks_proto
 } // boost

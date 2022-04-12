@@ -1,0 +1,28 @@
+[/
+    Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
+
+    Distributed under the Boost Software License, Version 1.0. (See accompanying
+    file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+    Official repository: https://github.com/alandefreitas/socks_proto
+]
+
+[/-----------------------------------------------------------------------------]
+
+[section Authentication]
+
+All SOCKS implementations should support the GSSAPI (__rfc1961__) and
+Username/Password (__rfc1929__) methods.
+
+If the selected authentication method supports encapsulation for the
+purposes of integrity, authentication and/or confidentiality, the
+data are encapsulated using the method-dependent encapsulation.
+
+Similarly, when data arrives at the SOCKS server for the client, the
+server *MUST* encapsulate the data as appropriate for the authentication
+method in use.
+
+[include gssapi.qbk]
+[include userpass.qbk]
+
+[endsect]

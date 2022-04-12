@@ -1,0 +1,28 @@
+[/
+    Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
+
+    Distributed under the Boost Software License, Version 1.0. (See accompanying
+    file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+    Official repository: https://github.com/alandefreitas/socks_proto
+]
+
+[/-----------------------------------------------------------------------------]
+
+[section Requests and Replies]
+
+Once connected to and authenticated with the SOCKS server, the client and the
+server exchange requests and replies in three command (`CMD`) categories:
+
+# `0x01` - `CONNECT`: Connect command
+# `0x02` - `BIND`: Bind command
+# `0x03` - `UDP ASSOCIATE`: UDP associate command (SOCKS5 only)
+
+There is an associated server reply for each client request. The `BIND`
+command require a previous successful `CONNECT` reply.
+
+[include connect.qbk]
+[include bind.qbk]
+[include udp_associate.qbk]
+
+[endsect]

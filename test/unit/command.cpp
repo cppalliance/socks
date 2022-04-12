@@ -9,19 +9,19 @@
 //
 
 // Test that header file is self-contained.
-#include <boost/socks_proto/version.hpp>
+#include <boost/socks_proto/command.hpp>
 #include <sstream>
 #include "test_suite.hpp"
 
 namespace boost {
 namespace socks_proto {
 
-class version_test
+class command_test
 {
 public:
     static
     void
-    check(version v, string_view s)
+    check(command v, string_view s)
     {
         std::stringstream ss;
         ss << v;
@@ -31,14 +31,16 @@ public:
     void
     run()
     {
-        check(version::socks_4, "SOCKS/4.0");
-        check(version::socks_5, "SOCKS/5.0");
+        check(command::connect, "CONNECT");
+        check(command::bind, "BIND");
+        check(command::udp_associate, "UDP ASSOCIATE");
+        check(command::unsupported, "UNSUPPORTED");
     }
 };
 
 TEST_SUITE(
-    version_test,
-    "boost.socks_proto.version");
+    command_test,
+    "boost.socks_proto.command");
 
 } // socks_proto
 } // boost

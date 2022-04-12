@@ -26,8 +26,12 @@ in a translation unit of the program.
 // using src.hpp as their main header file
 #include <boost/socks_proto.hpp>
 
+#include <boost/socks_proto/impl/address_type.ipp>
+#include <boost/socks_proto/impl/auth_method.ipp>
+#include <boost/socks_proto/impl/command.ipp>
 #include <boost/socks_proto/impl/version.ipp>
-#include <boost/socks_proto/impl/status.ipp>
+#include <boost/socks_proto/impl/reply_code.ipp>
+#include <boost/socks_proto/impl/reply_code_v4.ipp>
 #include <boost/socks_proto/detail/impl/except.ipp>
 
 #endif

@@ -1,0 +1,146 @@
+[/
+    Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
+
+    Distributed under the Boost Software License, Version 1.0. (See accompanying
+    file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+    Official repository: https://github.com/alandefreitas/socks_proto
+]
+
+[/-----------------------------------------------------------------------------]
+
+[section UDP Associate]
+
+A `UDP ASSOCIATE` request is used to create an association to handle UDP
+datagrams. Analogous to a `CONNECT` request, the `DST.ADDR` and `DST.PORT`
+fields in the request determine the application server the client expects
+to use to send UDP datagrams.
+
+[heading UDP Associate Request]
+
+The following `UDP ASSOCIATE` request should be encapsulated according to the
+authentication method with the following format:
+
+[teletype]
+```
+        +----+-----+-------+------+----------+----------+
+        |VER | CMD |  RSV  | ATYP | DST.ADDR | DST.PORT |
+        +----+-----+-------+------+----------+----------+
+          1     1    `0x00`    1     Variable      2
+```
+
+where:
+
+# `VER`: `0x05` SOCKS protocol version number
+# `CMD`: Command code `0x03` for `BIND` request
+# `RSV`: RESERVED
+# `ATYP`: Destination address type
+# `DST.ADDR`: Destination address
+# `DST.PORT`: Destination port
+
+If the client is not in possession of `DST.ADDR` and `DST.PORT` at the
+time the `UDP ASSOCIATE` request is create, it *MUST* use a port number
+and address of all zeros.
+
+[note
+    The `UDP ASSOCIATE` command is not available in the __socks4__.
+]
+
+[heading UDP Associate Reply]
+
+A reply packet is sent to the client to inform about the connection
+status. Two replies are sent from the SOCKS server to the client
+when:
+
+# The server creates and binds a new socket
+# The incoming connection succeeds or fails
+
+[teletype]
+```
+    +----+-----+-------+------+----------+----------+
+    |VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |
+    +----+-----+-------+------+----------+----------+
+      1     1    `0x00`    1     Variable      2
+```
+
+where:
+
+# `VER`: SOCKS Protocol Version: `0x05`
+# `REP`: Reply field
+# `RSV`: RESERVED (`0x00`)
+# `ATYP`: Address type
+# `BND.ADDR`: Server bound address
+# `BND.PORT`: Server bound port
+
+The code `REP` might have one of the following values:
+
+# `0x00`: succeeded
+# `0x01`: general SOCKS server failure
+# `0x02`: connection not allowed by ruleset
+# `0x03`: Network unreachable
+# `0x04`: Host unreachable
+# `0x05`: Connection refused
+# `0x06`: TTL expired
+# `0x07`: Command not supported
+# `0x08`: Address type not supported
+# `0x09` to `0xFF` unassigned
+
+When a reply from the SOCKS server indicates a failure, the SOCKS server
+*MUST* terminate the TCP connection immediately after sending the reply.
+
+If the reply is successful, the UDP is valid for as long as the TCP connection
+on which the `UDP ASSOCIATE` request arrived.
+
+[heading UDP datagrams]
+
+The fields `BND.ADDR` and `BND.PORT` indicate the port number and address where
+the client *MUST* send UDP requests to the application server. If the selected
+authentication method provides encapsulation, the datagrams *MUST* be encapsulated
+using the method.
+
+Each UDP datagram from the client or the server should carry a UDP request header
+in the following format:
+
+[teletype]
+```
+    +----+------+------+----------+----------+----------+
+    |RSV | FRAG | ATYP | DST.ADDR | DST.PORT |   DATA   |
+    +----+------+------+----------+----------+----------+
+      2     1      1     Variable      2       Variable
+```
+
+where:
+
+# `RSV`: Reserved X'0000'
+# `FRAG`: Current fragment number
+# `ATYP`: Address type
+# `DST.ADDR`: Desired destination address
+# `DST.PORT`: Desired destination port
+# `DATA`: User data
+
+The field `FRAG` indicates whether this is one of a series of datagrams.
+
+# The high-order bit indicates end-of-fragment sequence.
+# The value `0x00` indicates the datagram is standalone
+# Values between `1` and `127` indicate the fragment position in a sequence
+
+A reassembly queue and timer of no less than 5 seconds should be associated
+with the fragments, and the queue should be reinitialized when:
+
+# The reassembly timer expires, or
+# A new `FRAG` field whose value is less than the highest `FRAG` in the queue
+
+Fragmentation should be avoided whenever possible, and their implementation
+is optional. If fragmentation is not supported, the SOCKS server should drop
+any datagram whose `FRAG` is other than `0x00`.
+
+The SOCKS server relays UDP datagrams silently without notifications to
+the client. The server is also allowed to drop datagrams it cannot or
+will not relay. The server *MUST* drop datagrams from any source other
+than the client.
+
+
+
+[/-----------------------------------------------------------------------------]
+
+[endsect]

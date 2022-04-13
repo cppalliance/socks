@@ -132,6 +132,10 @@ install:
   - if NOT "%APPVEYOR_PROJECT_NAME%" == "boost-ci" xcopy /s /e /q /i /y C:\boost-ci-cloned\ci .\ci
   - rmdir /s /q C:\boost-ci-cloned
   - ci\appveyor\install.bat
+  # Customization
+  - echo %BOOST_ROOT%\libs
+  - pushd %BOOST_ROOT%\libs
+  - git clone https://github.com/CPPAlliance/url -b develop
 
 build: off
 

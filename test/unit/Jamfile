@@ -30,11 +30,10 @@ local SOURCES =
     request_view.cpp
     string_view.cpp
     test_helpers.cpp
-    test_helpers.hpp
     version.cpp
     ;
 
 for local f in $(SOURCES)
 {
-    run $(f) ./test_helpers.cpp /boost/socks_proto//boost_socks_proto ;
+    run $(f) ./test_helpers.cpp /boost/socks_proto//boost_socks_proto /boost/socks_proto//socks_proto_sources ;
 }

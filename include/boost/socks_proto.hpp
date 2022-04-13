@@ -21,7 +21,6 @@
 #include <boost/socks_proto/reply_code_v4.hpp>
 #include <boost/socks_proto/reply_view.hpp>
 #include <boost/socks_proto/request_view.hpp>
-#include <boost/socks_proto/src.hpp>
 #include <boost/socks_proto/string_view.hpp>
 #include <boost/socks_proto/version.hpp>
 

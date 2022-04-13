@@ -8,19 +8,8 @@
 // Official repository: https://github.com/alandefreitas/socks_proto
 //
 
-#ifndef BOOST_SOCKS_PROTO_SRC_HPP
-#define BOOST_SOCKS_PROTO_SRC_HPP
-
-/*
-
-This file is meant to be included once,
-in a translation unit of the program.
-
-*/
-
 #ifndef BOOST_SOCKS_PROTO_SOURCE
 #define BOOST_SOCKS_PROTO_SOURCE
-#endif
 
 // We include this in case someone is
 // using src.hpp as their main header file
@@ -35,3 +24,4 @@ in a translation unit of the program.
 #include <boost/socks_proto/detail/impl/except.ipp>
 
 #endif
+

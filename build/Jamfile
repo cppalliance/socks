@@ -28,8 +28,6 @@ explicit socks_proto_sources ;
 
 lib boost_socks_proto
    : socks_proto_sources
-   : requirements
-   : usage-requirements
    ;
 
 boost-install boost_socks_proto ;

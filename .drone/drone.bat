@@ -18,6 +18,12 @@ SET BOOST_CI_SRC_FOLDER=%cd%
 
 call ci\common_install.bat
 
+echo '==================================> Customizations'
+
+pushd %BOOST_ROOT%\libs
+git clone https://github.com/CPPAlliance/url -b develop
+popd
+
 echo '==================================> COMPILE'
 
 REM set B2_TARGETS=libs/!SELF!/test libs/!SELF!/example

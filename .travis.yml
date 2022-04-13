@@ -54,6 +54,12 @@ install:
   - [[ $(basename "$TRAVIS_BUILD_DIR") = "boost-ci" ]] || cp -prf boost-ci-cloned/ci .
   - rm -rf boost-ci-cloned
   - source ci/travis/install.sh
+  # Customization
+  - pwd
+  - pushd $BOOST_ROOT/libs
+  - git clone https://github.com/CPPAlliance/url -b develop
+  - popd
+  - pwd
 
 script: $BOOST_ROOT/libs/$SELF/ci/travis/build.sh
 

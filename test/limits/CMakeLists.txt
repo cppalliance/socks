@@ -21,7 +21,7 @@ target_compile_definitions(boost_socks_proto_limits PRIVATE
     BOOST_SOCKS_PROTO_STATIC_LINK
 )
 target_link_libraries(boost_socks_proto_limits PRIVATE
-    boost_socks_proto
+    Boost::socks_proto
 )
 target_link_libraries(boost_socks_proto_limits INTERFACE Boost::socks_proto)
 add_test(NAME boost_socks_proto_limits COMMAND boost_socks_proto_limits)

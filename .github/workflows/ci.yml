@@ -124,6 +124,9 @@ jobs:
             fi
             git config --global pack.threads 0
 
+      - name: Trust My Container Directory
+        run: git config --global --add safe.directory /__w/socks_proto/socks_proto
+
       - uses: actions/checkout@v2
         with:
           # For coverage builds fetch the whole history, else only 1 commit using a 'fake ternary'

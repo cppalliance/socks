@@ -7,5 +7,14 @@
 # Official repository: https://github.com/alandefreitas/socks_proto
 #
 
-add_subdirectory(sync)
-add_subdirectory(async)
+add_executable (socks-client-async
+        socks_client_async.cpp
+        )
+
+target_link_libraries(socks-client-async
+        Boost::asio
+        Boost::beast
+        Boost::url
+        Boost::socks_proto)
+
+set_property(TARGET socks-client-async PROPERTY FOLDER "example-socks-client-async")

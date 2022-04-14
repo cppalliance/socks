@@ -109,7 +109,7 @@ socks_connect_v4(
         asio::buffer(request.data(), request.size()),
         ec);
     if (ec)
-        return fail(ec, "CONNECT: write");
+        return fail(ec, "socks_connect_v4: write");
 
     // Read the CONNECT reply
     auto& reply = buffer;
@@ -118,12 +118,14 @@ socks_connect_v4(
         stream,
         asio::buffer(reply.data(), reply.size()),
         ec);
-    if (ec && ec != asio::error::eof)
+    if (ec == asio::error::eof)
         // asio::error::eof indicates there was
         // a SOCKS error and the server
-        // closed the connection cleanly, so
-        // we continue parsing the reply
-        return fail(ec, "CONNECT: read");
+        // closed the connection cleanly
+        return fail(ec, "socks_connect_v4: read: SOCKS server disconnected");
+    else if (ec)
+        // read failed
+        return fail(ec, "socks_connect_v4: read");
 
     // Parse the CONNECT reply
     if (n != 8 && n != 2)
@@ -135,10 +137,11 @@ socks_connect_v4(
         ec = asio::error::message_size;
 
     // VER: In SOCKS4, the reply version is allowed to
-    // be 0. In general this is the SOCKS version.
-    if (reply[0] != 0x00 && reply[0] != 0x04)
+    // be 0x00. In general this is the SOCKS version
+    // as 40 or 50.
+    if (reply[0] != 0x00 && reply[0] != 40)
     {
-        if (reply[0] == 0x05)
+        if (reply[0] == 50)
         {
             // We are trying to connect to a SOCKS5
             // server

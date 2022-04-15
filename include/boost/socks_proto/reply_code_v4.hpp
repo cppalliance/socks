@@ -12,7 +12,9 @@
 #define BOOST_SOCKS_PROTO_REPLY_CODE_V4_HPP
 
 #include <boost/socks_proto/detail/config.hpp>
+#include <boost/socks_proto/error.hpp>
 #include <boost/socks_proto/string_view.hpp>
+#include <boost/system/is_error_code_enum.hpp>
 #include <iosfwd>
 
 namespace boost {
@@ -47,6 +49,16 @@ BOOST_SOCKS_PROTO_DECL
 reply_code_v4
 to_reply_code_v4(unsigned v);
 
+BOOST_SOCKS_PROTO_DECL
+error_code
+make_error_code(
+    reply_code_v4 e) noexcept;
+
+BOOST_SOCKS_PROTO_DECL
+error_condition
+make_error_condition(
+    reply_code_v4 c) noexcept;
+
 /** Returns SOCKS4 reply code as a string view.
 
     @param v The reply code to use.
@@ -62,5 +74,18 @@ operator<<(std::ostream&, reply_code_v4);
 
 } // socks_proto
 } // boost
+
+namespace boost {
+namespace system {
+
+template <>
+struct is_error_code_enum<socks_proto::reply_code_v4>
+{
+    static const bool value = true;
+};
+
+} // namespace system
+} // namespace boost
+
 
 #endif

@@ -12,7 +12,6 @@
 
 #include <boost/socks_proto/detail/config.hpp>
 #include <boost/socks_proto/string_view.hpp>
-#include <boost/socks_proto/byte.hpp>
 #include <iosfwd>
 
 namespace boost {
@@ -20,7 +19,7 @@ namespace socks_proto {
 
 /** Constants representing SOCKS address types.
 */
-enum class address_type : byte
+enum class address_type : unsigned char
 {
     /// IP V4 address
     ip_v4       = 0x01,

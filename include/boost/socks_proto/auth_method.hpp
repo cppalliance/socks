@@ -12,7 +12,6 @@
 
 #include <boost/socks_proto/detail/config.hpp>
 #include <boost/socks_proto/string_view.hpp>
-#include <boost/socks_proto/byte.hpp>
 #include <iosfwd>
 
 namespace boost {
@@ -20,7 +19,7 @@ namespace socks_proto {
 
 /** Constants representing SOCKS auth_methods.
 */
-enum class auth_method : byte
+enum class auth_method : unsigned char
 {
     /// No authentication
     no_authentication = 0x00,

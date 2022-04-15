@@ -42,7 +42,7 @@ to_string(auth_method v) noexcept
     case auth_method::no_acceptable_method:
         return "No acceptable method";
     default:
-        if (static_cast<byte>(v) <= 0x7F)
+        if (static_cast<unsigned char>(v) <= 0x7F)
             return "Unassigned";
         return "Methods reserved for private use";
     }

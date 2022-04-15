@@ -13,8 +13,6 @@
 
 #include <boost/socks_proto/address_type.hpp>
 #include <boost/socks_proto/auth_method.hpp>
-#include <boost/socks_proto/byte.hpp>
-#include <boost/socks_proto/byte_view.hpp>
 #include <boost/socks_proto/command.hpp>
 #include <boost/socks_proto/error.hpp>
 #include <boost/socks_proto/reply_code.hpp>

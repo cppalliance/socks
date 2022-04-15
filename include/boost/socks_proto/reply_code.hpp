@@ -12,7 +12,9 @@
 #define BOOST_SOCKS_PROTO_REPLY_CODE_HPP
 
 #include <boost/socks_proto/detail/config.hpp>
+#include <boost/socks_proto/error.hpp>
 #include <boost/socks_proto/string_view.hpp>
+#include <boost/system/is_error_code_enum.hpp>
 #include <iosfwd>
 
 namespace boost {
@@ -70,7 +72,29 @@ BOOST_SOCKS_PROTO_DECL
 std::ostream&
 operator<<(std::ostream&, reply_code);
 
+BOOST_SOCKS_PROTO_DECL
+error_code
+make_error_code(
+    reply_code e) noexcept;
+
+BOOST_SOCKS_PROTO_DECL
+error_condition
+make_error_condition(
+    reply_code c) noexcept;
+
 } // socks_proto
 } // boost
+
+namespace boost {
+namespace system {
+
+template <>
+struct is_error_code_enum<socks_proto::reply_code>
+{
+    static const bool value = true;
+};
+
+} // namespace system
+} // namespace boost
 
 #endif

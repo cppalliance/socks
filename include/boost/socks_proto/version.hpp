@@ -13,7 +13,6 @@
 
 #include <boost/socks_proto/detail/config.hpp>
 #include <boost/socks_proto/string_view.hpp>
-#include <boost/socks_proto/byte.hpp>
 #include <iosfwd>
 
 namespace boost {
@@ -28,7 +27,7 @@ namespace socks_proto {
     @li https://datatracker.ietf.org/doc/html/rfc1928#section-4
     @li https://www.openssh.com/txt/socks4.protocol
 */
-enum class version : byte
+enum class version : unsigned char
 {
     /// SOCKS Protocol Version 4
     socks_4  = 40,

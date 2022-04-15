@@ -73,6 +73,63 @@ operator<<(std::ostream& os, reply_code v)
     return os << to_string(v);
 }
 
+error_code
+make_error_code(
+    reply_code e) noexcept
+{
+    struct codes : error_category
+    {
+        const char*
+        name() const noexcept override
+        {
+            return "boost.socks_proto.reply_code";
+        }
+
+        std::string
+        message(int ev) const override
+        {
+            return to_string(
+                to_reply_code(ev));
+        }
+
+        error_condition
+        default_error_condition(
+            int ev) const noexcept override
+        {
+            return {
+                static_cast<int>(to_reply_code(ev)),
+                *this};
+        }
+    };
+
+    static codes const cat{};
+    return error_code{static_cast<
+        std::underlying_type<reply_code>::type>(e), cat};
+}
+
+error_condition
+make_error_condition(
+    reply_code c) noexcept
+{
+    struct codes : error_category
+    {
+        const char*
+        name() const noexcept override
+        {
+            return "boost.url.reply_code";
+        }
+
+        std::string
+        message(int cv) const override
+        {
+            return to_string(to_reply_code(cv));
+        }
+    };
+    static codes const cat{};
+    return error_condition{static_cast<
+        std::underlying_type<reply_code>::type>(c), cat};
+}
+
 } // http_proto
 } // boost
 

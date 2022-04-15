@@ -55,202 +55,183 @@ default_port(const urls::url_view& u)
 
 namespace detail
 {
-    template <class Stream, class Handler>
-    class connect_v4_operations
+    template <class Stream>
+    class connect_v4_implementation
     {
     public:
+        connect_v4_implementation(
+            Stream& s,
+            tcp::endpoint target_host,
+            string_view socks_user)
+            : stream_(s)
+            , buffer_(9 + socks_user.size())
+            , target_host_(std::move(target_host))
+        {
+            prepare_request(socks_user);
+        }
+
+        template <typename Self>
+        void
+        operator()(
+            Self& self,
+            error_code ec = {},
+            std::size_t n = 0)
+        {
+            switch (state_)
+            {
+            case starting:
+                // Send the CONNECT request
+                state_ = writing;
+                asio::async_write(
+                    stream_,
+                    asio::buffer(buffer_),
+                    std::move(self));
+                break;
+            case writing:
+                if (ec)
+                    return self.complete(ec, tcp::endpoint{});
+                // Handle successful CONNECT request
+                // Prepare for CONNECT reply
+                buffer_.resize(8);
+                // Read the CONNECT reply
+                state_ = reading;
+                asio::async_read(
+                    stream_,
+                    asio::buffer(buffer_),
+                    std::move(self)
+                );
+                break;
+            case reading:
+                // asio::error::eof indicates there was
+                // a SOCKS error and the server
+                // closed the connection cleanly
+                if (ec && ec != asio::error::eof)
+                    return self.complete(ec, tcp::endpoint{});
+                // Handle successful CONNECT reply
+                // Parse the CONNECT reply
+                auto r = parse_response(n);
+                self.complete(r.first, r.second);
+                break;
+            }
+        }
+
+    private:
         // All these operations are repeatedly
         // implementing a pattern that should be
         // later encapsulated into
         // socks_proto::request
         // and socks_proto::reply
-        explicit connect_v4_operations(
-            Handler&& handler,
-            Stream& stream,
-            string_view socks_user,
-            tcp::endpoint const& target_host)
-            : handler_(std::move(handler))
-            , stream_(stream)
-            , buffer_(socks_user.size() + 9)
+        void
+        prepare_request(string_view socks_user)
         {
             // Prepare a CONNECT request
-            auto& request = buffer_;
-
             // VER
-            request[0] = static_cast<socks_proto::byte>(
+            buffer_[0] = static_cast<socks_proto::byte>(
                 socks_proto::version::socks_4);
 
             // CMD
-            request[1] = static_cast<socks_proto::byte>(
+            buffer_[1] = static_cast<socks_proto::byte>(
                 socks_proto::command::connect);
 
             // DSTPORT
-            std::uint16_t target_port = target_host.port();
-            request[2] = target_port >> 8;
-            request[3] = target_port & 0xFF;
+            std::uint16_t target_port = target_host_.port();
+            buffer_[2] = target_port >> 8;
+            buffer_[3] = target_port & 0xFF;
 
             // DSTIP
             auto ip_bytes =
-                target_host.address().to_v4().to_bytes();
-            request[4] = ip_bytes[0];
-            request[5] = ip_bytes[1];
-            request[6] = ip_bytes[2];
-            request[7] = ip_bytes[3];
+                target_host_.address().to_v4().to_bytes();
+            buffer_[4] = ip_bytes[0];
+            buffer_[5] = ip_bytes[1];
+            buffer_[6] = ip_bytes[2];
+            buffer_[7] = ip_bytes[3];
 
             // USERID
             for (std::size_t i = 0; i < socks_user.size(); ++i)
-                request[8 + i] = socks_user[i];
+                buffer_[8 + i] = socks_user[i];
 
             // NULL
-            request.back() = '\0';
-
-            // Send the CONNECT request
-            asio::async_write(
-                stream_,
-                asio::buffer(request),
-                std::move(*this));
+            buffer_.back() = '\0';
         }
 
-        // handle async_write
-        void
-        operator()(error_code ec)
+        std::pair<error_code, tcp::endpoint>
+        parse_response(std::size_t n)
         {
-            if (ec)
-            {
-                handler_(ec, tcp::endpoint{});
-                return;
-            }
-
-            // Read the CONNECT reply
-            buffer_.resize(8);
-            asio::async_read(
-                stream_,
-                asio::buffer(buffer_),
-                std::move(*this)
-            );
-        }
-
-        // handle async_read
-        void
-        operator()(error_code ec, std::size_t n)
-        {
-            // asio::error::eof indicates there was
-            // a SOCKS error and the server
-            // closed the connection cleanly
-            if (ec && ec != asio::error::eof)
-                return fail(ec);
-
-            // Parse the CONNECT reply
             if (n < 2)
                 // Successful messages have size 8
                 // Some servers return only 2 bytes,
                 // since DSTPORT and DSTIP can be ignored
                 // in SOCKS4 or to return error messages,
                 // including SOCKS5 errors
-                return fail(asio::error::message_size);
+                return {asio::error::message_size, tcp::endpoint{}};
 
-            auto& reply = buffer_;
-            // VER: In SOCKS4, the reply version is allowed to
-            // be 0x00. In general this is the SOCKS version as
-            // 40.
-            if (reply[0] != 0x00 && reply[0] != 40)
+            // VER:
+            if (buffer_[0] == 50)
             {
-                if (reply[0] == 50)
-                {
-                    // We are trying to connect to a SOCKS5
-                    // server
-                    ec = error_code(
-                        static_cast<int>(
-                            socks_proto::to_reply_code(reply[1])),
-                        beast::generic_category());
-                    return fail(ec);
-                }
-                ec = error_code(
+                // We are trying to connect to a SOCKS5
+                // server
+                error_code ec(
                     static_cast<int>(
-                        socks_proto::to_reply_code_v4(reply[1])),
-                    beast::generic_category());
+                        socks_proto::to_reply_code(buffer_[1])),
+                        beast::generic_category());
+                return {ec, tcp::endpoint{}};
+            }
+
+            // In SOCKS4, the reply version is allowed to
+            // be 0x00. In general, this is the SOCKS version as
+            // 40.
+            if (buffer_[0] != 0x00 && buffer_[0] != 40)
+            {
+                error_code ec(
+                    static_cast<int>(
+                        socks_proto::to_reply_code_v4(buffer_[1])),
+                        beast::generic_category());
+                return {ec, tcp::endpoint{}};
             }
 
             // REP: the res
-            auto rep = socks_proto::to_reply_code_v4(reply[1]);
-            if (!ec &&
-                rep != socks_proto::reply_code_v4::request_granted)
+            auto rep = socks_proto::to_reply_code_v4(buffer_[1]);
+            if (rep != socks_proto::reply_code_v4::request_granted)
             {
-                ec = error_code(
+                error_code ec(
                     static_cast<int>(rep),
                     beast::generic_category());
+                return {ec, tcp::endpoint{}};
             }
 
             // DSTPORT and DSTIP might be ignored
             // in SOCKS4, which does not represent
             // an error
-            if (n != 8)
-            {
-                handler_(ec, tcp::endpoint{});
-                return;
-            }
+            if (n < 8)
+                return {error_code{}, tcp::endpoint{}};
 
             // DSTPORT
-            std::uint16_t port{reply[2]};
+            std::uint16_t port{buffer_[2]};
             port <<= 8;
-            port |= reply[3];
+            port |= buffer_[3];
 
             // DSTIP
-            std::uint32_t ip{reply[3]};
-            ip <<= 8;
-            port |= reply[4];
-            ip <<= 8;
-            port |= reply[5];
-            ip <<= 8;
-            port |= reply[6];
+            std::uint32_t ip{buffer_[3]};
+            ip = (ip << 8) | buffer_[4];
+            ip = (ip << 8) | buffer_[5];
+            ip = (ip << 8) | buffer_[6];
 
             tcp::endpoint ep{
                 ip::make_address_v4(ip),
                 port
             };
-            handler_(ec, ep);
+            return {error_code{}, ep};
         }
 
-    private:
-        void
-        fail(error_code ec)
-        {
-            handler_(ec, tcp::endpoint{});
-        }
-
-        Handler handler_;
         Stream& stream_;
         std::vector<socks_proto::byte> buffer_;
-    };
-
-    class connect_v4_initiator
-    {
-    public:
-        template <
-            class AsyncStream,
-            class CompletionHandler
-            >
-        void
-        operator()(
-            CompletionHandler&& handler,
-            AsyncStream& stream,
-            tcp::endpoint const& target_host,
-            string_view socks_user) const
+        tcp::endpoint target_host_;
+        enum
         {
-            // Because this is C++11, we
-            // implement the logic in another
-            // functor where we can also control
-            // the lifetime of the handler
-            connect_v4_operations<
-                AsyncStream,
-                typename std::decay<CompletionHandler>::type>
-            (
-                std::forward<CompletionHandler>(handler),
-                stream,
-                socks_user,
-                target_host
-            );
-        }
+            starting,
+            writing,
+            reading
+        } state_{starting};
     };
 } // detail
 
@@ -274,15 +255,21 @@ async_socks_connect_v4(
     // async_initiate will:
     // - transform token into handler
     // - call initiation_fn(handler, args...)
-    return asio::async_initiate<
+    return asio::async_compose<
             CompletionToken,
             void (error_code, tcp::endpoint)>
     (
-        detail::connect_v4_initiator{},
+        // implementation of the composed asynchronous operation
+        detail::connect_v4_implementation<AsyncStream>{
+                s,
+                target_host,
+                socks_user
+            },
+        // the completion token
         token,
-        s,
-        target_host,
-        socks_user
+        // I/O objects or I/O executors for which
+        // outstanding work must be maintained
+        s
     );
 }
 
@@ -305,13 +292,13 @@ public:
     }
 
     bool
-    has_error()
+    has_error() const
     {
         return static_cast<bool>(ec_);
     }
 
     error_code
-    error()
+    error() const
     {
         return ec_;
     }

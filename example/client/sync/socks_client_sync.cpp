@@ -26,6 +26,8 @@
 #include <iostream>
 #include <string>
 
+#include "helpers.hpp"
+
 namespace socks_proto = boost::socks_proto;
 namespace urls = boost::urls;
 namespace beast = boost::beast;
@@ -45,29 +47,14 @@ fail(beast::error_code ec, char const* what)
     return false;
 }
 
-std::uint16_t default_port(const urls::url_view& u)
-{
-    if (!u.has_port())
-    {
-        if (u.scheme_id() == urls::scheme::http)
-            return 80;
-        if (u.scheme_id() == urls::scheme::https)
-            return 445;
-        if (u.scheme().starts_with("socks"))
-            return 1080;
-    }
-    return u.port_number();
-}
-
 // These functions are implementing what should
 // be encapsulated into socks_proto::request
 // in the future. A similar prototype should
 // go to socks_io.
-bool
+tcp::endpoint
 socks_connect_v4(
     tcp::socket& stream,
     tcp::endpoint const& target_host,
-    std::uint16_t target_port,
     string_view socks_user,
     beast::error_code& ec)
 {
@@ -75,103 +62,52 @@ socks_connect_v4(
     // implementing a pattern that should be
     // encapsulated into socks_proto::request
     // and socks_proto::reply in the future
-
-    std::vector<socks_proto::byte> buffer;
-
-    // Prepare a CONNECT request
-    auto& request = buffer;
-    request.resize(socks_user.size() + 9);
-    // VER
-    request[0] = static_cast<socks_proto::byte>(
-        socks_proto::version::socks_4);
-    // CMD
-    request[1] = static_cast<socks_proto::byte>(
-        socks_proto::command::connect);
-    // DSTPORT
-    request[2] = target_port >> 8;
-    request[3] = target_port & 0xFF;
-    // DSTIP
-    auto ip_bytes =
-        target_host.address().to_v4().to_bytes();
-    request[4] = ip_bytes[0];
-    request[5] = ip_bytes[1];
-    request[6] = ip_bytes[2];
-    request[7] = ip_bytes[3];
-    // USERID
-    for (std::size_t i = 0; i < socks_user.size(); ++i)
-        request[8 + i] = socks_user[i];
-    // NULL
-    request.back() = '\0';
+    std::vector<unsigned char> buffer =
+        prepare_request(
+            target_host, socks_user);
 
     // Send a CONNECT request
     asio::write(
         stream,
-        asio::buffer(request.data(), request.size()),
+        asio::buffer(buffer),
         ec);
     if (ec)
-        return fail(ec, "socks_connect_v4: write");
+    {
+        fail(ec, "socks_connect_v4: write");
+        return tcp::endpoint{};
+    }
 
     // Read the CONNECT reply
-    auto& reply = buffer;
-    reply.resize(8);
+    buffer.resize(8);
     std::size_t n = asio::read(
         stream,
-        asio::buffer(reply.data(), reply.size()),
+        asio::buffer(buffer.data(), buffer.size()),
         ec);
     if (ec == asio::error::eof)
+    {
         // asio::error::eof indicates there was
         // a SOCKS error and the server
         // closed the connection cleanly
-        return fail(ec, "socks_connect_v4: read: SOCKS server disconnected");
+        fail(ec, "socks_connect_v4: read: SOCKS server disconnected");
+        return tcp::endpoint{};
+    }
     else if (ec)
+    {
         // read failed
-        return fail(ec, "socks_connect_v4: read");
+        fail(ec, "socks_connect_v4: read");
+        return tcp::endpoint{};
+    }
 
     // Parse the CONNECT reply
-    if (n != 8 && n != 2)
-        // Successful messages have size 8
-        // Some servers return only 2 bytes,
-        // since DSTPORT and DSTIP can be ignored
-        // in SOCKS4 or to return error messages,
-        // including SOCKS5 errors
-        ec = asio::error::message_size;
+    buffer.resize(n);
+    auto r = parse_reply(buffer);
+    if (!ec)
+        ec = r.first;
 
-    // VER: In SOCKS4, the reply version is allowed to
-    // be 0x00. In general this is the SOCKS version
-    // as 40 or 50.
-    if (reply[0] != 0x00 && reply[0] != 40)
-    {
-        if (reply[0] == 50)
-        {
-            // We are trying to connect to a SOCKS5
-            // server
-            ec = beast::error_code(
-                static_cast<int>(
-                    socks_proto::to_reply_code(reply[1])),
-                beast::generic_category());
-            return false;
-        }
-        ec = beast::error_code(
-            static_cast<int>(
-                socks_proto::to_reply_code_v4(reply[1])),
-            beast::generic_category());
-        return false;
-    }
-
-    // REP: the res
-    auto rep = socks_proto::to_reply_code_v4(reply[1]);
-    if (rep != socks_proto::reply_code_v4::request_granted)
-    {
-        ec = beast::error_code(
-            static_cast<int>(rep),
-            beast::generic_category());
-    }
-
-    // DSTPORT and DSTIP are ignored in SOCKS4
-    return !ec;
+    return r.second;
 }
 
-bool
+tcp::endpoint
 socks_connect_v4(
     tcp::socket& stream,
     string_view target_host,
@@ -189,7 +125,10 @@ socks_connect_v4(
             std::to_string(target_port),
             ec);
     if (ec)
-        return fail(ec, "resolve target");
+    {
+        fail(ec, "resolve target");
+        return tcp::endpoint{};
+    }
     auto it = endpoints.begin();
     while (it != endpoints.end())
     {
@@ -202,18 +141,18 @@ socks_connect_v4(
                 ec = asio::error::host_not_found;
             continue;
         }
-        bool s = socks_connect_v4(
+        ep.port(target_port);
+        ep = socks_connect_v4(
             stream,
             ep,
-            target_port,
             socks_user,
             ec);
         if (ec)
             continue;
-        if (s)
-            return true;
+        else
+            return ep;
     }
-    return false;
+    return tcp::endpoint{};
 }
 
 bool

@@ -13,6 +13,7 @@ exe socks-client-v4-async :
     /boost/socks_proto//socks_proto_sources
     /boost/url//boost_url
     :
+    <include>../sync
     <variant>coverage:<build>no
     <variant>ubasan:<build>no
     ;

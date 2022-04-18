@@ -17,4 +17,5 @@ target_link_libraries(socks-client-async
         Boost::url
         Boost::socks_proto)
 
+target_include_directories(socks-client-async PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../sync)
 set_property(TARGET socks-client-async PROPERTY FOLDER "example-socks-client-async")

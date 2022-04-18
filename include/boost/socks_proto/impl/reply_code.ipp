@@ -92,6 +92,18 @@ make_error_code(
                 to_reply_code(ev));
         }
 
+        char const *
+        message(
+            int ev,
+            char* buffer,
+            std::size_t len ) const noexcept override
+        {
+            string_view msg = to_string(
+                to_reply_code(ev));
+            msg.copy(buffer, len);
+            return buffer;
+        }
+
         error_condition
         default_error_condition(
             int ev) const noexcept override
@@ -99,6 +111,13 @@ make_error_code(
             return {
                 static_cast<int>(to_reply_code(ev)),
                 *this};
+        }
+
+        bool
+        failed( int ev ) const noexcept override
+        {
+            return to_reply_code(ev) !=
+                   reply_code::succeeded;
         }
     };
 

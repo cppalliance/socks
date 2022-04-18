@@ -17,7 +17,9 @@
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
 
+#include <boost/asio/coroutine.hpp>
 #include <boost/asio/connect.hpp>
+#include <boost/asio/compose.hpp>
 #include <boost/asio/read.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ip/udp.hpp>
@@ -25,6 +27,8 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
+
+#include "helpers.hpp"
 
 namespace socks_proto = boost::socks_proto;
 namespace urls = boost::urls;
@@ -38,201 +42,93 @@ using error_code = boost::system::error_code;
 
 //------------------------------------------------------------------------------
 
-std::uint16_t
-default_port(const urls::url_view& u)
-{
-    if (!u.has_port())
-    {
-        if (u.scheme_id() == urls::scheme::http)
-            return 80;
-        if (u.scheme_id() == urls::scheme::https)
-            return 445;
-        if (u.scheme().starts_with("socks"))
-            return 1080;
-    }
-    return u.port_number();
-}
-
 namespace detail
 {
-    template <class Stream>
-    class connect_v4_implementation
+template <class Stream, class Allocator>
+class connect_v4_implementation
+{
+public:
+    connect_v4_implementation(
+        Stream& s,
+        tcp::endpoint target_host,
+        string_view socks_user,
+        Allocator const& a)
+        : stream_(s)
+        , buffer_(prepare_request(target_host, socks_user, a))
+        , target_host_(std::move(target_host))
     {
-    public:
-        connect_v4_implementation(
-            Stream& s,
-            tcp::endpoint target_host,
-            string_view socks_user)
-            : stream_(s)
-            , buffer_(9 + socks_user.size())
-            , target_host_(std::move(target_host))
-        {
-            prepare_request(socks_user);
-        }
+    }
 
-        template <typename Self>
-        void
-        operator()(
-            Self& self,
-            error_code ec = {},
-            std::size_t n = 0)
+    template <typename Self>
+    void
+    operator()(
+        Self& self,
+        error_code ec = {},
+        std::size_t n = 0)
+    {
+        tcp::endpoint ep{};
+        BOOST_ASIO_CORO_REENTER(coro_)
         {
-            switch (state_)
+            // Send the CONNECT request
+            BOOST_ASIO_HANDLER_LOCATION((
+                __FILE__, __LINE__,
+                "asio::async_write"));
+            BOOST_ASIO_CORO_YIELD
+            asio::async_write(
+                stream_,
+                asio::buffer(buffer_),
+                std::move(self));
+            // Handle successful CONNECT request
+            // Prepare for CONNECT reply
+            if (ec.failed())
+                goto complete;
+            BOOST_ASSERT(buffer_.capacity() >= 8);
+            buffer_.resize(8);
+            // Read the CONNECT reply
+            BOOST_ASIO_HANDLER_LOCATION((
+                __FILE__, __LINE__,
+                "asio::async_read"));
+            BOOST_ASIO_CORO_YIELD
+            asio::async_read(
+                stream_,
+                asio::buffer(buffer_),
+                std::move(self)
+            );
+            // Handle successful CONNECT reply
+            // Parse the CONNECT reply
+            if (ec.failed() && ec != asio::error::eof)
             {
-            case starting:
-                // Send the CONNECT request
-                state_ = writing;
-                asio::async_write(
-                    stream_,
-                    asio::buffer(buffer_),
-                    std::move(self));
-                break;
-            case writing:
-                if (ec)
-                    return self.complete(ec, tcp::endpoint{});
-                // Handle successful CONNECT request
-                // Prepare for CONNECT reply
-                buffer_.resize(8);
-                // Read the CONNECT reply
-                state_ = reading;
-                asio::async_read(
-                    stream_,
-                    asio::buffer(buffer_),
-                    std::move(self)
-                );
-                break;
-            case reading:
                 // asio::error::eof indicates there was
                 // a SOCKS error and the server
                 // closed the connection cleanly
-                if (ec && ec != asio::error::eof)
-                    return self.complete(ec, tcp::endpoint{});
-                // Handle successful CONNECT reply
-                // Parse the CONNECT reply
-                auto r = parse_response(n);
-                self.complete(r.first, r.second);
-                break;
+                // we still want to parse the response
+                // to find out what kind of error
+                goto complete;
             }
-        }
-
-    private:
-        // All these operations are repeatedly
-        // implementing a pattern that should be
-        // later encapsulated into
-        // socks_proto::request
-        // and socks_proto::reply
-        void
-        prepare_request(string_view socks_user)
-        {
-            // Prepare a CONNECT request
-            // VER
-            buffer_[0] = static_cast<socks_proto::byte>(
-                socks_proto::version::socks_4);
-
-            // CMD
-            buffer_[1] = static_cast<socks_proto::byte>(
-                socks_proto::command::connect);
-
-            // DSTPORT
-            std::uint16_t target_port = target_host_.port();
-            buffer_[2] = target_port >> 8;
-            buffer_[3] = target_port & 0xFF;
-
-            // DSTIP
-            auto ip_bytes =
-                target_host_.address().to_v4().to_bytes();
-            buffer_[4] = ip_bytes[0];
-            buffer_[5] = ip_bytes[1];
-            buffer_[6] = ip_bytes[2];
-            buffer_[7] = ip_bytes[3];
-
-            // USERID
-            for (std::size_t i = 0; i < socks_user.size(); ++i)
-                buffer_[8 + i] = socks_user[i];
-
-            // NULL
-            buffer_.back() = '\0';
-        }
-
-        std::pair<error_code, tcp::endpoint>
-        parse_response(std::size_t n)
-        {
-            if (n < 2)
-                // Successful messages have size 8
-                // Some servers return only 2 bytes,
-                // since DSTPORT and DSTIP can be ignored
-                // in SOCKS4 or to return error messages,
-                // including SOCKS5 errors
-                return {asio::error::message_size, tcp::endpoint{}};
-
-            // VER:
-            if (buffer_[0] == 50)
+            BOOST_ASSERT(buffer_.capacity() >= n);
+            buffer_.resize(n);
             {
-                // We are trying to connect to a SOCKS5
-                // server
-                error_code ec(
-                    static_cast<int>(
-                        socks_proto::to_reply_code(buffer_[1])),
-                        beast::generic_category());
-                return {ec, tcp::endpoint{}};
+                error_code rec;
+                std::tie(rec, ep) = parse_reply(buffer_);
+                if (rec.failed() &&
+                    rec != socks_proto::reply_code_v4::unassigned)
+                    ec = rec;
             }
-
-            // In SOCKS4, the reply version is allowed to
-            // be 0x00. In general, this is the SOCKS version as
-            // 40.
-            if (buffer_[0] != 0x00 && buffer_[0] != 40)
+        complete:
             {
-                error_code ec(
-                    static_cast<int>(
-                        socks_proto::to_reply_code_v4(buffer_[1])),
-                        beast::generic_category());
-                return {ec, tcp::endpoint{}};
+                // Free memory before invoking the handler
+                decltype(buffer_) tmp( std::move(buffer_) );
             }
-
-            // REP: the res
-            auto rep = socks_proto::to_reply_code_v4(buffer_[1]);
-            if (rep != socks_proto::reply_code_v4::request_granted)
-            {
-                error_code ec(
-                    static_cast<int>(rep),
-                    beast::generic_category());
-                return {ec, tcp::endpoint{}};
-            }
-
-            // DSTPORT and DSTIP might be ignored
-            // in SOCKS4, which does not represent
-            // an error
-            if (n < 8)
-                return {error_code{}, tcp::endpoint{}};
-
-            // DSTPORT
-            std::uint16_t port{buffer_[2]};
-            port <<= 8;
-            port |= buffer_[3];
-
-            // DSTIP
-            std::uint32_t ip{buffer_[3]};
-            ip = (ip << 8) | buffer_[4];
-            ip = (ip << 8) | buffer_[5];
-            ip = (ip << 8) | buffer_[6];
-
-            tcp::endpoint ep{
-                ip::make_address_v4(ip),
-                port
-            };
-            return {error_code{}, ep};
+            return self.complete(ec, ep);
         }
+    }
 
-        Stream& stream_;
-        std::vector<socks_proto::byte> buffer_;
-        tcp::endpoint target_host_;
-        enum
-        {
-            starting,
-            writing,
-            reading
-        } state_{starting};
-    };
+private:
+    Stream& stream_;
+    std::vector<unsigned char, Allocator> buffer_;
+    tcp::endpoint target_host_;
+    asio::coroutine coro_;
+};
 } // detail
 
 // SOCKS4 connect initiating function
@@ -252,6 +148,12 @@ async_socks_connect_v4(
     string_view socks_user,
     CompletionToken&& token)
 {
+    using DecayedToken =
+        typename std::decay<CompletionToken>::type;
+    using allocator_type =
+        boost::allocator_rebind_t<
+            typename asio::associated_allocator<
+                DecayedToken>::type, unsigned char>;
     // async_initiate will:
     // - transform token into handler
     // - call initiation_fn(handler, args...)
@@ -260,10 +162,12 @@ async_socks_connect_v4(
             void (error_code, tcp::endpoint)>
     (
         // implementation of the composed asynchronous operation
-        detail::connect_v4_implementation<AsyncStream>{
+        detail::connect_v4_implementation<
+            AsyncStream, allocator_type>{
                 s,
                 target_host,
-                socks_user
+                socks_user,
+                asio::get_associated_allocator(token)
             },
         // the completion token
         token,
@@ -440,7 +344,11 @@ private:
         // In SOCKS4, we skip authentication
         // and go straight to CONNECT
         tcp::endpoint ep{
+#if defined(BOOST_ASIO_HAS_STRING_VIEW)
+            ip::make_address_v4(std::string_view(target_.encoded_host())),
+#else
             ip::make_address_v4(target_.encoded_host()),
+#endif
             target_.port_number()
         };
         async_socks_connect_v4(
@@ -571,7 +479,9 @@ private:
     void
     fail(error_code ec, char const* what)
     {
-        std::cerr << what << ": " << ec.message() << "\n";
+        std::cerr << what <<
+            ": " << ec.category().name() <<
+            " - " << ec.message() << "\n";
         ec_ = ec;
     }
 
@@ -602,12 +512,21 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+    /*
+     * Some SOCKS proxy lists:
+     * https://www.proxy-list.download/SOCKS4
+     * https://www.proxy-list.download/SOCKS5
+     * https://spys.one/en/socks-proxy-list/
+     */
     asio::io_context ioc;
     socks_client c(ioc, 11, argv[1], argv[2]);
     ioc.run();
     if (c.has_error())
     {
-        std::cerr << "client: " << c.error().message() << "\n";
+        std::cerr <<
+            "Client on " << argv[2] <<
+            " - " << c.error().category().name() <<
+            " - " << c.error().message() << '\n';
         return EXIT_FAILURE;
     }
 

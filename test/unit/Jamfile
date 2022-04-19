@@ -35,5 +35,5 @@ local SOURCES =
 
 for local f in $(SOURCES)
 {
-    run $(f) ./test_helpers.cpp /boost/socks_proto//boost_socks_proto /boost/socks_proto//socks_proto_sources ;
+    run $(f) ./test_helpers.cpp /boost/socks_proto//boost_socks_proto ;
 }

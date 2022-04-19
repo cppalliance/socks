@@ -20,5 +20,6 @@ constant c11-requires :
     ]
     ;
 
+build-project example ;
 build-project test ;
 build-project test/limits ;

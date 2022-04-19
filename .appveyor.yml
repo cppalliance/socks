@@ -133,9 +133,7 @@ install:
   - rmdir /s /q C:\boost-ci-cloned
   - ci\appveyor\install.bat
   # Customization
-  - echo %BOOST_ROOT%\libs
-  - pushd %BOOST_ROOT%\libs
-  - git clone https://github.com/CPPAlliance/url -b develop
+  - git clone https://github.com/CPPAlliance/url -b develop C:\projects\boost-root\libs\url
 
 build: off
 

@@ -16,6 +16,7 @@ set(EXTRAFILES
 
 set(PFILES
     CMakeLists.txt
+    io/connect_v4.cpp
     address_type.cpp
     auth_method.cpp
     command.cpp

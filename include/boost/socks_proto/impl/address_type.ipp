@@ -16,6 +16,21 @@
 namespace boost {
 namespace socks_proto {
 
+address_type
+to_address_type(unsigned v)
+{
+    switch(static_cast<address_type>(v))
+    {
+    case address_type::ip_v4:
+    case address_type::domain_name:
+    case address_type::ip_v6:
+        return static_cast<address_type>(v);
+    default:
+        break;
+    }
+    return address_type::unknown;
+}
+
 string_view
 to_string(address_type v) noexcept
 {
@@ -27,6 +42,8 @@ to_string(address_type v) noexcept
         return "Domain name";
     case address_type::ip_v6:
         return "IPv6";
+    default:
+        break;
     }
     return "UNKNOWN";
 }

@@ -53,7 +53,7 @@ enum class reply_code : uint8_t
 /** Converts an integer to a known reply code.
 
     If the integer does not match a known reply code,
-    @ref status::unknown is returned.
+    @ref status::unassigned is returned.
 */
 BOOST_SOCKS_PROTO_DECL
 reply_code

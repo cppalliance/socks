@@ -30,9 +30,9 @@ namespace socks_proto {
 enum class version : unsigned char
 {
     /// SOCKS Protocol Version 4
-    socks_4  = 40,
+    socks_4  = 0x04,
     /// SOCKS Protocol Version 5
-    socks_5  = 50
+    socks_5  = 0x05
 };
 
 /** Return the serialized string representing the SOCKS version

@@ -62,6 +62,8 @@
 [def __Swappable__              [@https://en.cppreference.com/w/cpp/named_req/Swappable ['Swappable]]]
 
 [def __string_view__            [link socks_proto.ref.boost__socks_proto__string_view `string_view`]]
+[def __connect_v4__             [link socks_proto.ref.boost__socks_proto__io__connect_v4 `connect_v4`]]
+[def __async_connect_v4__             [link socks_proto.ref.boost__socks_proto__io__async_connect_v4 `async_connect_v4`]]
 
 [/ Dingbats ]
 
@@ -71,6 +73,11 @@
 [/-----------------------------------------------------------------------------]
 
 [include overview.qbk]
+
+[section Input/Output]
+[include io.qbk]
+[include io_connect.qbk]
+[endsect]
 
 [section Protocol]
 [include protocol.qbk]

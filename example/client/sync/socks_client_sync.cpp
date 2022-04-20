@@ -10,6 +10,8 @@
 #include <boost/socks_proto/reply_code.hpp>
 #include <boost/socks_proto/reply_code_v4.hpp>
 
+#include <boost/socks_proto/io/connect_v4.hpp>
+
 #include <boost/url/url_view.hpp>
 
 #include <boost/beast/core.hpp>
@@ -26,9 +28,7 @@
 #include <iostream>
 #include <string>
 
-#include "helpers.hpp"
-
-namespace socks_proto = boost::socks_proto;
+namespace socks = boost::socks_proto;
 namespace urls = boost::urls;
 namespace beast = boost::beast;
 namespace http = beast::http;
@@ -47,112 +47,19 @@ fail(beast::error_code ec, char const* what)
     return false;
 }
 
-// These functions are implementing what should
-// be encapsulated into socks_proto::request
-// in the future. A similar prototype should
-// go to socks_io.
-tcp::endpoint
-socks_connect_v4(
-    tcp::socket& stream,
-    tcp::endpoint const& target_host,
-    string_view socks_user,
-    beast::error_code& ec)
+std::uint16_t
+default_port(const boost::urls::url_view& u)
 {
-    // All these functions are repeatedly
-    // implementing a pattern that should be
-    // encapsulated into socks_proto::request
-    // and socks_proto::reply in the future
-    std::vector<unsigned char> buffer =
-        prepare_request(
-            target_host, socks_user);
-
-    // Send a CONNECT request
-    asio::write(
-        stream,
-        asio::buffer(buffer),
-        ec);
-    if (ec)
+    if (!u.has_port())
     {
-        fail(ec, "socks_connect_v4: write");
-        return tcp::endpoint{};
+        if (u.scheme_id() == boost::urls::scheme::http)
+            return 80;
+        if (u.scheme_id() == boost::urls::scheme::https)
+            return 445;
+        if (u.scheme().starts_with("socks"))
+            return 1080;
     }
-
-    // Read the CONNECT reply
-    buffer.resize(8);
-    std::size_t n = asio::read(
-        stream,
-        asio::buffer(buffer.data(), buffer.size()),
-        ec);
-    if (ec == asio::error::eof)
-    {
-        // asio::error::eof indicates there was
-        // a SOCKS error and the server
-        // closed the connection cleanly
-        fail(ec, "socks_connect_v4: read: SOCKS server disconnected");
-        return tcp::endpoint{};
-    }
-    else if (ec)
-    {
-        // read failed
-        fail(ec, "socks_connect_v4: read");
-        return tcp::endpoint{};
-    }
-
-    // Parse the CONNECT reply
-    buffer.resize(n);
-    auto r = parse_reply(buffer);
-    if (!ec)
-        ec = r.first;
-
-    return r.second;
-}
-
-tcp::endpoint
-socks_connect_v4(
-    tcp::socket& stream,
-    string_view target_host,
-    std::uint16_t target_port,
-    string_view socks_user,
-    beast::error_code& ec)
-{
-    // SOCKS4 does not support domain names
-    // The domain name needs to be resolved
-    // on the client
-    tcp::resolver resolver{stream.get_executor()};
-    tcp::resolver::results_type endpoints =
-        resolver.resolve(
-            std::string(target_host),
-            std::to_string(target_port),
-            ec);
-    if (ec)
-    {
-        fail(ec, "resolve target");
-        return tcp::endpoint{};
-    }
-    auto it = endpoints.begin();
-    while (it != endpoints.end())
-    {
-        tcp::endpoint ep = it->endpoint();
-        ++it;
-        // SOCKS4 does not support IPv6 addresses
-        if (ep.address().is_v6())
-        {
-            if (!ec)
-                ec = asio::error::host_not_found;
-            continue;
-        }
-        ep.port(target_port);
-        ep = socks_connect_v4(
-            stream,
-            ep,
-            socks_user,
-            ec);
-        if (ec)
-            continue;
-        else
-            return ep;
-    }
-    return tcp::endpoint{};
+    return u.port_number();
 }
 
 bool
@@ -173,15 +80,15 @@ socks_request(
     if (!r.has_value())
         return fail(r.error(), "Parse SOCKS");
     urls::url_view socks = r.value();
-    socks_proto::version socks_version;
+    socks::version socks_version;
     if (socks.scheme() == "socks5")
     {
-        socks_version = socks_proto::version::socks_5;
+        socks_version = socks::version::socks_5;
     }
     else if (socks.scheme() == "socks4" ||
              socks.scheme() == "socks4a")
     {
-        socks_version = socks_proto::version::socks_4;
+        socks_version = socks::version::socks_4;
     }
     else
     {
@@ -193,14 +100,14 @@ socks_request(
     }
 
     // Validate parameters
-    if (socks_version == socks_proto::version::socks_4 &&
+    if (socks_version == socks::version::socks_4 &&
         target.host_type() == urls::host_type::ipv6)
     {
         std::cerr <<
             "SOCKS4 does not support IPv6 addresses\n";
         return false;
     }
-    else if (socks_version == socks_proto::version::socks_5)
+    else if (socks_version == socks::version::socks_5)
     {
         std::cerr <<
             "SOCKS5 not supported by this client\n";
@@ -210,7 +117,6 @@ socks_request(
     // Make the connection on the SOCKS server
     tcp::socket socket{ioc};
     beast::error_code ec;
-
 
     if (socks.host_type() == urls::host_type::name)
     {
@@ -275,14 +181,14 @@ socks_request(
 
     // Continue with SOCKS4 procedure, as
     // SOCKS5 is not supported yet
-    socks_connect_v4(
+    socks::io::connect_v4(
         socket,
         target.encoded_host(),
         default_port(target),
         socks.encoded_user(),
         ec);
     if (ec)
-        return fail(ec, "socks_connect_v4");
+        return fail(ec, "connect_v4");
 
     /*
      * After this point, we can talk to the

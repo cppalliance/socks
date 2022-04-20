@@ -22,4 +22,6 @@
 #include <boost/socks_proto/string_view.hpp>
 #include <boost/socks_proto/version.hpp>
 
+#include <boost/socks_proto/io/connect_v4.hpp>
+
 #endif

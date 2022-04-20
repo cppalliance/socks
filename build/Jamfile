@@ -8,15 +8,40 @@
 # Official repository: https://github.com/alandefreitas/socks_proto
 #
 
+lib socket ; # SOLARIS
+lib nsl ; # SOLARIS
+lib ws2_32 ; # NT
+lib mswsock ; # NT
+lib ipv6 ; # HPUX
+lib network ; # HAIKU
+
 project boost/socks_proto
     : requirements
       $(c11-requires)
-      <link>shared:<define>BOOST_SOCKS_PROTO_DYN_LINK=1
-      <link>static:<define>BOOST_SOCKS_PROTO_STATIC_LINK=1
-      <define>BOOST_SOCKS_PROTO_SOURCE
+        <link>shared:<define>BOOST_SOCKS_PROTO_DYN_LINK=1
+        <link>static:<define>BOOST_SOCKS_PROTO_STATIC_LINK=1
+        <define>BOOST_SOCKS_PROTO_SOURCE
+        <target-os>solaris:<library>socket
+        <target-os>solaris:<library>nsl
+        <target-os>windows:<define>_WIN32_WINNT=0x0501
+        <target-os>windows,<toolset>gcc:<library>ws2_32
+        <target-os>windows,<toolset>gcc:<library>mswsock
+        <target-os>windows,<toolset>gcc-cygwin:<define>__USE_W32_SOCKETS
+        <target-os>hpux,<toolset>gcc:<define>_XOPEN_SOURCE_EXTENDED
+        <target-os>hpux:<library>ipv6
+        <target-os>haiku:<library>network
     : usage-requirements
-      <link>shared:<define>BOOST_SOCKS_PROTO_DYN_LINK=1
-      <link>static:<define>BOOST_SOCKS_PROTO_STATIC_LINK=1
+        <link>shared:<define>BOOST_SOCKS_PROTO_DYN_LINK=1
+        <link>static:<define>BOOST_SOCKS_PROTO_STATIC_LINK=1
+        <target-os>solaris:<library>socket
+        <target-os>solaris:<library>nsl
+        <target-os>windows:<define>_WIN32_WINNT=0x0501
+        <target-os>windows,<toolset>gcc:<library>ws2_32
+        <target-os>windows,<toolset>gcc:<library>mswsock
+        <target-os>windows,<toolset>gcc-cygwin:<define>__USE_W32_SOCKETS
+        <target-os>hpux,<toolset>gcc:<define>_XOPEN_SOURCE_EXTENDED
+        <target-os>hpux:<library>ipv6
+        <target-os>haiku:<library>network
     : source-location ../src
     ;
 

@@ -26,8 +26,19 @@ enum class address_type : unsigned char
     /// Domain name
     domain_name = 0x03,
     /// IP V6 address
-    ip_v6       = 0x04
+    ip_v6       = 0x04,
+    /// Unknown address type
+    unknown     = 0xFF
 };
+
+/** Converts an integer to a known reply code.
+
+    If the integer does not match a known reply code,
+    @ref status::unassigned is returned.
+*/
+BOOST_SOCKS_PROTO_DECL
+address_type
+to_address_type(unsigned v);
 
 /** Return the serialized string representing the SOCKS address_type
 */

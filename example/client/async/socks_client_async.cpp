@@ -5,11 +5,12 @@
 // https://www.boost.org/LICENSE_1_0.txt
 //
 
-#include <utility>
 #include <boost/socks_proto/version.hpp>
 #include <boost/socks_proto/command.hpp>
 #include <boost/socks_proto/reply_code.hpp>
 #include <boost/socks_proto/reply_code_v4.hpp>
+
+#include <boost/socks_proto/io/connect_v4.hpp>
 
 #include <boost/url/url.hpp>
 
@@ -17,20 +18,18 @@
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
 
-#include <boost/asio/coroutine.hpp>
 #include <boost/asio/connect.hpp>
-#include <boost/asio/compose.hpp>
 #include <boost/asio/read.hpp>
+#include <boost/asio/write.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ip/udp.hpp>
 
 #include <cstdlib>
 #include <iostream>
 #include <string>
+#include <utility>
 
-#include "helpers.hpp"
-
-namespace socks_proto = boost::socks_proto;
+namespace socks = boost::socks_proto;
 namespace urls = boost::urls;
 namespace beast = boost::beast;
 namespace http = beast::http;
@@ -42,139 +41,19 @@ using error_code = boost::system::error_code;
 
 //------------------------------------------------------------------------------
 
-namespace detail
+std::uint16_t
+default_port(const boost::urls::url_view& u)
 {
-template <class Stream, class Allocator>
-class connect_v4_implementation
-{
-public:
-    connect_v4_implementation(
-        Stream& s,
-        tcp::endpoint target_host,
-        string_view socks_user,
-        Allocator const& a)
-        : stream_(s)
-        , buffer_(prepare_request(target_host, socks_user, a))
-        , target_host_(std::move(target_host))
+    if (!u.has_port())
     {
+        if (u.scheme_id() == boost::urls::scheme::http)
+            return 80;
+        if (u.scheme_id() == boost::urls::scheme::https)
+            return 445;
+        if (u.scheme().starts_with("socks"))
+            return 1080;
     }
-
-    template <typename Self>
-    void
-    operator()(
-        Self& self,
-        error_code ec = {},
-        std::size_t n = 0)
-    {
-        tcp::endpoint ep{};
-        BOOST_ASIO_CORO_REENTER(coro_)
-        {
-            // Send the CONNECT request
-            BOOST_ASIO_HANDLER_LOCATION((
-                __FILE__, __LINE__,
-                "asio::async_write"));
-            BOOST_ASIO_CORO_YIELD
-            asio::async_write(
-                stream_,
-                asio::buffer(buffer_),
-                std::move(self));
-            // Handle successful CONNECT request
-            // Prepare for CONNECT reply
-            if (ec.failed())
-                goto complete;
-            BOOST_ASSERT(buffer_.capacity() >= 8);
-            buffer_.resize(8);
-            // Read the CONNECT reply
-            BOOST_ASIO_HANDLER_LOCATION((
-                __FILE__, __LINE__,
-                "asio::async_read"));
-            BOOST_ASIO_CORO_YIELD
-            asio::async_read(
-                stream_,
-                asio::buffer(buffer_),
-                std::move(self)
-            );
-            // Handle successful CONNECT reply
-            // Parse the CONNECT reply
-            if (ec.failed() && ec != asio::error::eof)
-            {
-                // asio::error::eof indicates there was
-                // a SOCKS error and the server
-                // closed the connection cleanly
-                // we still want to parse the response
-                // to find out what kind of error
-                goto complete;
-            }
-            BOOST_ASSERT(buffer_.capacity() >= n);
-            buffer_.resize(n);
-            {
-                error_code rec;
-                std::tie(rec, ep) = parse_reply(buffer_);
-                if (rec.failed() &&
-                    rec != socks_proto::reply_code_v4::unassigned)
-                    ec = rec;
-            }
-        complete:
-            {
-                // Free memory before invoking the handler
-                decltype(buffer_) tmp( std::move(buffer_) );
-            }
-            return self.complete(ec, ep);
-        }
-    }
-
-private:
-    Stream& stream_;
-    std::vector<unsigned char, Allocator> buffer_;
-    tcp::endpoint target_host_;
-    asio::coroutine coro_;
-};
-} // detail
-
-// SOCKS4 connect initiating function
-// - These overloads look similar to what we
-// should have in socks_io.
-// - Their implementation includes what should
-// be later encapsulated into
-// socks_proto::request and socks_proto::reply.
-template <class AsyncStream, class CompletionToken>
-typename asio::async_result<
-    typename asio::decay<CompletionToken>::type,
-    void (error_code, tcp::endpoint)
->::return_type
-async_socks_connect_v4(
-    AsyncStream& s,
-    tcp::endpoint const& target_host,
-    string_view socks_user,
-    CompletionToken&& token)
-{
-    using DecayedToken =
-        typename std::decay<CompletionToken>::type;
-    using allocator_type =
-        boost::allocator_rebind_t<
-            typename asio::associated_allocator<
-                DecayedToken>::type, unsigned char>;
-    // async_initiate will:
-    // - transform token into handler
-    // - call initiation_fn(handler, args...)
-    return asio::async_compose<
-            CompletionToken,
-            void (error_code, tcp::endpoint)>
-    (
-        // implementation of the composed asynchronous operation
-        detail::connect_v4_implementation<
-            AsyncStream, allocator_type>{
-                s,
-                target_host,
-                socks_user,
-                asio::get_associated_allocator(token)
-            },
-        // the completion token
-        token,
-        // I/O objects or I/O executors for which
-        // outstanding work must be maintained
-        s
-    );
+    return u.port_number();
 }
 
 class socks_client
@@ -344,14 +223,11 @@ private:
         // In SOCKS4, we skip authentication
         // and go straight to CONNECT
         tcp::endpoint ep{
-#if defined(BOOST_ASIO_HAS_STRING_VIEW)
-            ip::make_address_v4(std::string_view(target_.encoded_host())),
-#else
-            ip::make_address_v4(target_.encoded_host()),
-#endif
+            ip::make_address_v4(
+                std::string(target_.encoded_host())),
             target_.port_number()
         };
-        async_socks_connect_v4(
+        socks::io::async_connect_v4(
             socket_,
             ep,
             socks_.encoded_userinfo(),
@@ -436,14 +312,14 @@ private:
         socks_ = r.value();
         if (socks_.scheme() == "socks5")
         {
-            socks_version_ = socks_proto::version::
+            socks_version_ = socks::version::
                 socks_5;
         }
         else if (
             socks_.scheme() == "socks4"
             || socks_.scheme() == "socks4a")
         {
-            socks_version_ = socks_proto::version::
+            socks_version_ = socks::version::
                 socks_4;
         }
         else
@@ -458,7 +334,7 @@ private:
         }
 
         // Validate parameters
-        if (socks_version_ == socks_proto::version::socks_4
+        if (socks_version_ == socks::version::socks_4
             && target_.host_type() == urls::host_type::ipv6)
         {
             std::cerr
@@ -467,7 +343,7 @@ private:
             return;
         }
         else if (
-            socks_version_ == socks_proto::version::socks_5)
+            socks_version_ == socks::version::socks_5)
         {
             std::cerr << "SOCKS5 not supported by this client\n";
             ec_ = asio::error::no_protocol_option;
@@ -490,7 +366,7 @@ private:
     int http_version_;
     urls::url target_;
     urls::url socks_;
-    socks_proto::version socks_version_{socks_proto::version::socks_4};
+    socks::version socks_version_{socks::version::socks_4};
     beast::flat_buffer buffer_;
     http::response<http::string_body> res_;
     error_code ec_;

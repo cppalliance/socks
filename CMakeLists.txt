@@ -52,10 +52,15 @@ function(boost_socks_proto_setup_properties target)
 
     target_link_libraries(${target}
         PUBLIC
+            Boost::asio
             Boost::core
             Boost::system
             Boost::exception
     )
+
+    if (MINGW)
+        target_link_libraries(${target} PUBLIC ws2_32 mswsock)
+    endif()
 endfunction()
 
 file(GLOB_RECURSE BOOST_SOCKS_PROTO_HEADERS CONFIGURE_DEPENDS

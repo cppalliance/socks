@@ -1,0 +1,22 @@
+[/
+    Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
+
+    Distributed under the Boost Software License, Version 1.0. (See accompanying
+    file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+    Official repository: https://github.com/CPPAlliance/url
+]
+
+[heading Input/Output]
+
+The library is composed of two modules:
+
+# The protocol module
+# The Input/Output module
+
+The Input/Output module leverages the functionality of the protocol module to
+provide synchronous and asynchronous operations for the SOCKS protocol.
+
+Headers for the Input/Output module are available in the `/boost/socks_proto/io/`
+directory and have a dependency on
+[@https://www.boost.org/doc/libs/1_79_0/doc/html/boost_asio.html Boost.Asio].

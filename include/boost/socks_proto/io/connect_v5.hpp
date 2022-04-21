@@ -7,12 +7,14 @@
 // Official repository: https://github.com/alandefreitas/socks_proto
 //
 
-#ifndef BOOST_SOCKS_PROTO_IO_CONNECT_V4_HPP
-#define BOOST_SOCKS_PROTO_IO_CONNECT_V4_HPP
+#ifndef BOOST_SOCKS_PROTO_IO_CONNECT_V5_HPP
+#define BOOST_SOCKS_PROTO_IO_CONNECT_V5_HPP
 
 #include <boost/socks_proto/detail/config.hpp>
 #include <boost/socks_proto/string_view.hpp>
 #include <boost/socks_proto/error.hpp>
+#include <boost/socks_proto/io/auth.hpp>
+
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
@@ -20,108 +22,116 @@ namespace boost {
 namespace socks_proto {
 namespace io {
 
-/** Connect to the application server through a SOCKS4 server
+/** Connect to the application server through a SOCKS5 server
 
     This function establishes a connection to the
-    application server through a SOCKS4 server.
+    application server through a SOCKS5 server.
+
+    This composed operation includes the greeting,
+    sub-negotiation, and connect steps of the
+    SOCKS5 protocol.
 
     @par Preconditions
     The `SyncStream` should be connected to a
-    SOCKS4 server.
+    SOCKS5 server.
 
-    The endpoint must contain an IPv4 address.
+    The endpoint might contain IPv4 or IPv6 addresses.
 
     @par Example
     @code
     boost::asio::connect(s, resolver.resolve(socks_host, socks_service));
-    socks_proto::io::connect_v4(s, app_host_endpoint, "username", ec);
+    socks_proto::io::auth::no_auth opt{};
+    socks_proto::io::connect_v5(s, app_host_endpoint, opt, ec);
     @endcode
 
     @param s SyncStream connected to a SOCKS server.
     @param ep Application server endpoint.
-    @param ident_id SOCKS client user id.
+    @param opt Authentication options.
     @param ec Error code.
+
+    @return server bound address and port
 
     @par References
     @li <a href="https://www.openssh.com/txt/socks4.protocol">
         SOCKS: A protocol for TCP proxy across firewalls</a>
 */
-template <class SyncStream>
+template <class SyncStream, class AuthOptions>
 asio::ip::tcp::endpoint
-connect_v4(
+connect_v5(
     SyncStream& s,
     asio::ip::tcp::endpoint const& ep,
-    string_view ident_id,
+    AuthOptions opt,
     error_code& ec);
 
-/** Connect to the application server through a SOCKS4 server
+/** Connect to the application server through a SOCKS5 server
 
     This function establishes a connection to the
-    application server through a SOCKS4 server.
+    application server through a SOCKS5 server.
+
+    This composed operation includes the greeting,
+    sub-negotiation, and connect steps of the
+    SOCKS5 protocol.
 
     The application server is described as the domain
     name of the target host. According to the
-    SOCKS4 protocol, this domain name is resolved
-    on the client.
+    SOCKS5 protocol, this domain name is resolved
+    on the SOCKS server.
 
     @par Preconditions
     The `SyncStream` should be connected to a
-    SOCKS4 server.
+    SOCKS5 server.
 
-    The application server domain name should
-    be resolvable to an IPv4 address.
+    The endpoint might contain an IPv4 or IPv5
+    address.
 
     @par Example
     @code
     boost::asio::connect(s, resolver.resolve(socks_host, socks_service));
-    socks_proto::io::connect_v4(s, "www.example.com", 80, "username", ec);
+    socks_proto::io::connect_v5(s, "www.example.com", 80, "username", ec);
     @endcode
 
     @param s SyncStream connected to a SOCKS server.
     @param app_domain Domain name of the application server
     @param app_port Port of the application server
-    @param ident_id SOCKS client user id.
+    @param opt Authentication options
     @param ec Error code
-
-    @return server bound address and port
 
     @par References
     @li <a href="https://www.openssh.com/txt/socks4.protocol">
         SOCKS: A protocol for TCP proxy across firewalls</a>
 */
-template <class SyncStream>
+template <class SyncStream, class AuthOptions>
 asio::ip::tcp::endpoint
-connect_v4(
+connect_v5(
     SyncStream& s,
     string_view app_domain,
     std::uint16_t app_port,
-    string_view ident_id,
+    AuthOptions opt,
     error_code& ec);
 
-/** Asynchronously connect to the application server through a SOCKS4 server
+/** Asynchronously connect to the application server through a SOCKS5 server
 
     This function establishes a connection to the
-    application server through a SOCKS4 server.
+    application server through a SOCKS5 server.
+
+    This composed operation includes the greeting,
+    sub-negotiation, and connect steps of the
+    SOCKS5 protocol.
 
     After this operation, the client can communicate
-    with SOCKS4 proxy as if the talking to the
+    with SOCKS5 proxy as if the talking to the
     application server.
-
-    All SOCKS4 CONNECT requests contain a `ident_id`
-    to identify the user, where a connection
-    without authentication can be represented with
-    an empty id.
 
     @par Preconditions
     The `AsyncStream` should be connected to a
-    SOCKS4 server.
+    SOCKS5 server.
 
-    The endpoint must contain an IPv4 address.
+    The endpoint might contain IPv4 or IPv6 address.
 
     @par Example
     @code
     boost::asio::connect(s, resolver.resolve(socks_host, socks_service));
-    socks_io::async_connect_v4(
+    socks_io::async_connect_v5(
         s, app_host_endpoint, "username", ec,
         [](error_code ec, asio::ip::tcp::endpoint ep)
     {
@@ -135,54 +145,54 @@ connect_v4(
 
     @param s SyncStream connected to a SOCKS server.
     @param ep Application server endpoint.
-    @param ident_id SOCKS client user id.
+    @param opt Authentication options
     @param token Asio CompletionToken.
-
-    @return server bound address and port
 
     @par References
     @li <a href="https://www.openssh.com/txt/socks4.protocol">
         SOCKS: A protocol for TCP proxy across firewalls</a>
 
 */
-template <class AsyncStream, class CompletionToken>
+template <class AsyncStream, class AuthOptions, class CompletionToken>
 typename asio::async_result<
     typename asio::decay<CompletionToken>::type,
     void (error_code, asio::ip::tcp::endpoint)
 >::return_type
-async_connect_v4(
+async_connect_v5(
     AsyncStream& s,
     asio::ip::tcp::endpoint const& ep,
-    string_view ident_id,
+    AuthOptions opt,
     CompletionToken&& token);
 
-/** Asynchronously connect to the application server through a SOCKS4 server
+/** Asynchronously connect to the application server through a SOCKS5 server
 
     This function establishes a connection to the
-    application server through a SOCKS4 server.
+    application server through a SOCKS5 server.
 
+    This composed operation includes the greeting,
+    sub-negotiation, and connect steps of the
+    SOCKS5 protocol.
 
+    The application server is described as the domain
+    name of the target host. According to the
+    SOCKS5 protocol, this domain name is resolved
+    on the SOCKS server.
 
     After this operation, the client can communicate
-    with SOCKS4 proxy as if the talking to the
+    with SOCKS5 proxy as if the talking to the
     application server.
-
-    All SOCKS4 CONNECT requests contain a `ident_id`
-    to identify the user, where a connection
-    without authentication can be represented with
-    an empty id.
 
     @par Preconditions
     The `AsyncStream` should be connected to a
-    SOCKS4 server.
+    SOCKS5 server.
 
-    The endpoint must contain an IPv4 address.
+    The endpoint might contain IPv4 or IPv6 address.
 
     @par Example
     @code
     boost::asio::connect(s, resolver.resolve(socks_host, socks_service));
-    socks_io::async_connect_v4(
-        s, app_host_endpoint, "username", ec,
+    socks_io::async_connect_v5(
+        s, "www.example.com", 80, "username", ec,
         [](error_code ec, asio::ip::tcp::endpoint ep)
     {
         if (!ec.failed())
@@ -196,32 +206,30 @@ async_connect_v4(
     @param s SyncStream connected to a SOCKS server.
     @param app_domain Domain name of the application server
     @param app_port Port of the application server
-    @param ident_id SOCKS client user id.
+    @param opt Authentication options
     @param token Asio CompletionToken.
-
-    @return server bound address and port
 
     @par References
     @li <a href="https://www.openssh.com/txt/socks4.protocol">
         SOCKS: A protocol for TCP proxy across firewalls</a>
 
 */
-template <class AsyncStream, class CompletionToken>
+template <class AsyncStream, class AuthOptions, class CompletionToken>
 typename asio::async_result<
     typename asio::decay<CompletionToken>::type,
     void (error_code, asio::ip::tcp::endpoint)
 >::return_type
-async_connect_v4(
+async_connect_v5(
     AsyncStream& s,
     string_view app_domain,
     std::uint16_t app_port,
-    string_view ident_id,
+    AuthOptions opt,
     CompletionToken&& token);
 
 } // io
 } // socks_proto
 } // boost
 
-#include <boost/socks_proto/io/impl/connect_v4.hpp>
+#include <boost/socks_proto/io/impl/connect_v5.hpp>
 
 #endif

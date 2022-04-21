@@ -7,7 +7,7 @@
     Official repository: https://github.com/CPPAlliance/url
 ]
 
-[heading Input/Output]
+[heading Modules]
 
 The library is composed of two modules:
 
@@ -15,7 +15,7 @@ The library is composed of two modules:
 # The Input/Output module
 
 The Input/Output module leverages the functionality of the protocol module to
-provide synchronous and asynchronous operations for the SOCKS protocol.
+provide synchronous and asynchronous operations for SOCKS clients and servers.
 
 Headers for the Input/Output module are available in the `/boost/socks_proto/io/`
 directory and have a dependency on

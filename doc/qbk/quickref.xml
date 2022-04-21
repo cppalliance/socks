@@ -92,7 +92,9 @@
         <bridgehead renderas="sect3">Functions</bridgehead>
         <simplelist type="vert" columns="1">
           <member><link linkend="socks_proto.ref.boost__socks_proto__io__async_connect_v4">async_connect_v4</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__io__async_connect_v5">async_connect_v5</link></member>
           <member><link linkend="socks_proto.ref.boost__socks_proto__io__connect_v4">connect_v4</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__io__connect_v5">connect_v5</link></member>
         </simplelist>
       </entry>
 

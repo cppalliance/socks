@@ -39,7 +39,7 @@ connect_v4(
     // encapsulated into socks_proto::request
     // and socks_proto::reply in the future
     std::vector<unsigned char> buffer =
-        detail::prepare_request(
+        detail::prepare_request_v4(
             target_host, socks_user);
 
     // Send a CONNECT request
@@ -73,7 +73,7 @@ connect_v4(
 
     // Parse the CONNECT reply
     buffer.resize(n);
-    auto r = detail::parse_reply(buffer);
+    auto r = detail::parse_reply_v4(buffer);
     if (!ec)
         ec = r.first;
 

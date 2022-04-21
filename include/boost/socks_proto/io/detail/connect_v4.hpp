@@ -7,8 +7,8 @@
 // Official repository: https://github.com/alandefreitas/socks_proto
 //
 
-#ifndef BOOST_SOCKS_PROTO_IO_DETAIL_CONNECT_V4
-#define BOOST_SOCKS_PROTO_IO_DETAIL_CONNECT_V4
+#ifndef BOOST_SOCKS_PROTO_IO_DETAIL_CONNECT_V4_HPP
+#define BOOST_SOCKS_PROTO_IO_DETAIL_CONNECT_V4_HPP
 
 #include <boost/socks_proto/detail/config.hpp>
 #include <boost/socks_proto/string_view.hpp>
@@ -37,7 +37,7 @@ namespace detail {
 // and socks_proto::reply
 template <class Allocator = std::allocator<unsigned char>>
 std::vector<unsigned char, Allocator>
-prepare_request(
+prepare_request_v4(
     boost::asio::ip::tcp::endpoint const& target_host,
     boost::core::string_view socks_user,
     Allocator const& a = {})
@@ -81,7 +81,7 @@ template <class Allocator = std::allocator<unsigned char>>
 std::pair<
     boost::system::error_code,
     boost::asio::ip::tcp::endpoint>
-parse_reply(std::vector<unsigned char, Allocator> const& buffer)
+parse_reply_v4(std::vector<unsigned char, Allocator> const& buffer)
 {
     using error_code = boost::system::error_code;
     namespace asio = boost::asio;
@@ -161,8 +161,7 @@ public:
         string_view socks_user,
         Allocator const& a)
         : stream_(s)
-        , buffer_(prepare_request(target_host, socks_user, a))
-        , target_host_(std::move(target_host))
+        , buffer_(prepare_request_v4(target_host, socks_user, a))
     {
     }
 
@@ -216,7 +215,7 @@ public:
             buffer_.resize(n);
             {
                 error_code rec;
-                std::tie(rec, ep) = parse_reply(buffer_);
+                std::tie(rec, ep) = parse_reply_v4(buffer_);
                 if (rec.failed() &&
                     rec != socks_proto::reply_code_v4::unassigned)
                     ec = rec;
@@ -233,7 +232,6 @@ public:
 private:
     Stream& stream_;
     std::vector<unsigned char, Allocator> buffer_;
-    asio::ip::tcp::endpoint target_host_;
     boost::asio::coroutine coro_;
 };
 

@@ -35,5 +35,9 @@ in a translation unit of the program.
 // socks_proto detail
 #include <boost/socks_proto/detail/impl/except.ipp>
 
+// io detail
+#include <boost/socks_proto/io/detail/impl/connect_v4.ipp>
+#include <boost/socks_proto/io/detail/impl/connect_v5.ipp>
+
 #endif
 

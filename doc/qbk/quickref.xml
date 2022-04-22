@@ -110,6 +110,7 @@
         </simplelist>
         <bridgehead renderas="sect3">Aliases</bridgehead>
         <simplelist type="vert" columns="1">
+          <member><link linkend="socks_proto.ref.boost__socks_proto__io__endpoint">endpoint</link></member>
         </simplelist>
       </entry>
     </row></tbody>

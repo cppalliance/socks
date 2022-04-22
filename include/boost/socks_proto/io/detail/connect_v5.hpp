@@ -11,6 +11,9 @@
 #define BOOST_SOCKS_PROTO_IO_DETAIL_CONNECT_V5_HPP
 
 #include <boost/socks_proto/detail/config.hpp>
+
+#include <boost/socks_proto/io/endpoint.hpp>
+
 #include <boost/socks_proto/string_view.hpp>
 #include <boost/socks_proto/error.hpp>
 #include <boost/socks_proto/reply_code.hpp>
@@ -26,6 +29,7 @@
 #include <boost/asio/write.hpp>
 
 #include <boost/core/empty_value.hpp>
+#include <boost/core/allocator_access.hpp>
 
 namespace boost {
 namespace socks_proto {
@@ -81,7 +85,7 @@ prepare_greeting(io::auth::userpass const&) {
 inline
 std::size_t
 dst_addr_size(
-    boost::asio::ip::tcp::endpoint const& target_host) {
+    endpoint const& target_host) {
     return target_host.address().is_v6() ? 16 : 4;
 }
 
@@ -96,7 +100,7 @@ inline
 std::size_t
 write_target_host(
     unsigned char* buffer,
-    boost::asio::ip::tcp::endpoint const& target_host) {
+    endpoint const& target_host) {
     // ATYP
     buffer[0] = static_cast<unsigned char>(
         target_host.address().is_v6() ?
@@ -153,7 +157,8 @@ write_target_host(
 
 template <class Endpoint, class Allocator = std::allocator<unsigned char>>
 std::vector<unsigned char, Allocator>
-prepare_request_v5(Endpoint const& target_host,
+prepare_request_v5(
+    Endpoint const& target_host,
     Allocator const& a = {})
 {
     std::size_t n_dst_addr = dst_addr_size(target_host);
@@ -178,108 +183,15 @@ prepare_request_v5(Endpoint const& target_host,
     return buffer;
 }
 
-template <class Allocator = std::allocator<unsigned char>>
-std::pair<
-    boost::system::error_code,
-    boost::asio::ip::tcp::endpoint>
-parse_reply_v5(std::vector<unsigned char, Allocator> const& buffer)
-{
-    using error_code = boost::system::error_code;
-    namespace asio = boost::asio;
-    using tcp = boost::asio::ip::tcp;
-
-    if (buffer.size() < 2)
-    {
-        // Successful messages have size 8
-        // Some servers return only 2 bytes,
-        // since DSTPORT and DSTIP can be ignored
-        // in SOCKS4 or to return error messages,
-        // including SOCKS5 errors
-        return {
-            asio::error::access_denied,
-            tcp::endpoint{} };
-    }
-
-    // VER:
-    if (buffer[0] == 0x04)
-    {
-        // We connected to a SOCKS4 server
-        error_code ec =
-            boost::socks_proto::to_reply_code_v4(buffer[1]);
-        return {ec, tcp::endpoint{}};
-    }
-
-    // In SOCKS5, the reply version is allowed to
-    // be 0x00. In general, this is the SOCKS version as
-    // 40.
-    if (buffer[0] != 0x05)
-    {
-        error_code ec =
-            boost::socks_proto::to_reply_code(buffer[1]);
-        return {ec, tcp::endpoint{}};
-    }
-
-    // REP: the res
-    auto rep = boost::socks_proto::to_reply_code(buffer[1]);
-    if (rep != boost::socks_proto::reply_code::succeeded)
-    {
-        error_code ec =
-            boost::socks_proto::to_reply_code(buffer[1]);
-        return {ec, tcp::endpoint{}};
-    }
-
-    // DSTPORT and DSTIP might be ignored
-    // in some servers, which does not represent
-    // an error. Some other servers might
-    // still fill the reply with 0x00s
-    if (buffer.size() < 10)
-        return {error_code{}, tcp::endpoint{}};
-
-    // ATYP
-    address_type atyp = to_address_type(buffer[3]);
-
-    // DSTIP
-    switch (atyp)
-    {
-    case address_type::ip_v4:
-    {
-        if (buffer.size() < 10)
-            return {error_code{}, tcp::endpoint{}};
-        std::uint32_t ip{ buffer[4] };
-        ip = (ip << 8) | buffer[5];
-        ip = (ip << 8) | buffer[6];
-        ip = (ip << 8) | buffer[7];
-        std::uint16_t port{ buffer[8] };
-        port = (port << 8) | buffer[9];
-        tcp::endpoint ep{
-            asio::ip::make_address_v4(ip),
-            port
-        };
-        return {rep, ep};
-    }
-    case address_type::ip_v6:
-    {
-        if (buffer.size() < 22)
-            return {error_code{}, tcp::endpoint{}};
-        asio::ip::address_v6::bytes_type ip;
-        std::size_t i = 0;
-        for (i = 0; i < 16; ++i)
-            ip[i] = buffer[4 + i];
-        std::uint16_t port{ buffer[i++] };
-        port = (port << 8) | buffer[i++];
-        tcp::endpoint ep{
-            asio::ip::make_address_v6(ip),
-            port
-        };
-        return {rep, ep};
-    }
-    default:
-        return {reply_code::general_failure, tcp::endpoint{}};
-    }
-}
+BOOST_SOCKS_PROTO_DECL
+endpoint
+parse_reply_v5(
+    unsigned char const* buffer,
+    std::size_t n,
+    error_code& ec);
 
 template <class SyncStream, class EndpointV5, class AuthOptions>
-asio::ip::tcp::endpoint
+endpoint
 connect_v5_any(
     SyncStream& stream,
     EndpointV5&& target_host, // tcp::endpoint or pair<domain, port>
@@ -301,18 +213,18 @@ connect_v5_any(
         asio::buffer(buffer),
         ec);
     if (ec.failed())
-        return asio::ip::tcp::endpoint{};
+        return endpoint{};
 
     // Read GREETING reply
     buffer.resize(2);
     std::size_t n = asio::read(
         stream,
-        asio::buffer(buffer.data(), buffer.size()),
+        asio::buffer(buffer),
         ec);
     if (ec.failed())
-        return asio::ip::tcp::endpoint{};
+        return endpoint{};
 
-    // AFREITAS Implement sub-negotiation
+    // AFREITAS Implement sync sub-negotiation
 
     // Send a CONNECT request
     buffer = detail::prepare_request_v5(target_host);
@@ -321,26 +233,25 @@ connect_v5_any(
         asio::buffer(buffer),
         ec);
     if (ec.failed())
-        return asio::ip::tcp::endpoint{};
+        return endpoint{};
 
     // Read the CONNECT reply
     buffer.resize(22);
     n = asio::read(
         stream,
-        asio::buffer(buffer.data(), buffer.size()),
+        asio::buffer(buffer.data(), n),
         ec);
     if (ec.failed() && ec != asio::error::eof)
-        return asio::ip::tcp::endpoint{};
+        return endpoint{};
 
     buffer.resize(n);
-    asio::ip::tcp::endpoint ep;
-    std::tie(ec, ep) = detail::parse_reply_v5(buffer);
-    return ep;
+    return detail::parse_reply_v5(
+        buffer.data(), buffer.size(), ec);
 }
 
 template <class Stream, class Endpoint, class AuthOptions, class Allocator>
 class connect_v5_implementation
-    : private boost::empty_value<Allocator, 0>
+    : private empty_value<Allocator, 0>
 {
 public:
     connect_v5_implementation(
@@ -348,10 +259,10 @@ public:
         Endpoint target_host,
         AuthOptions opt,
         Allocator const& a)
-        : boost::empty_value<Allocator, 0>(boost::empty_init, a)
-        , stream_(s)
-        , buffer_(prepare_greeting(opt))
-        , target_host_(target_host)
+        : empty_value<Allocator, 0>(empty_init, a)
+        , s_(s)
+        , buf_(prepare_greeting(opt))
+        , target_(target_host)
         , opt_(opt)
     {
     }
@@ -363,7 +274,7 @@ public:
         error_code ec = {},
         std::size_t n = 0)
     {
-        asio::ip::tcp::endpoint ep{};
+        endpoint ep{};
         BOOST_ASIO_CORO_REENTER(coro_)
         {
             // Send a GREETING request
@@ -371,23 +282,23 @@ public:
                 __FILE__, __LINE__,
                 "asio::async_write"));
             BOOST_ASIO_CORO_YIELD
-            boost::asio::async_write(
-                stream_,
-                asio::buffer(buffer_),
+            asio::async_write(
+                s_,
+                asio::buffer(buf_),
                 std::move(self));
 
             // Read GREETING reply
             if (ec.failed())
                 goto complete;
-            BOOST_ASSERT(buffer_.capacity() >= 2);
-            buffer_.resize(2);
+            BOOST_ASSERT(buf_.capacity() >= 2);
+            buf_.resize(2);
             BOOST_ASIO_HANDLER_LOCATION((
                 __FILE__, __LINE__,
                 "asio::async_read"));
             BOOST_ASIO_CORO_YIELD
             asio::async_read(
-                stream_,
-                asio::buffer(buffer_.data(), buffer_.size()),
+                s_,
+                asio::buffer(buf_.data(), buf_.size()),
                 std::move(self));
 
             // AFREITAS Implement sub-negotiation
@@ -395,28 +306,28 @@ public:
             // Send the CONNECT request
             if (ec.failed())
                 goto complete;
-            buffer_ =
-                prepare_request_v5(target_host_, this->get());
+            buf_ =
+                prepare_request_v5(target_, this->get());
             BOOST_ASIO_HANDLER_LOCATION((
                 __FILE__, __LINE__,
                 "asio::async_write"));
             BOOST_ASIO_CORO_YIELD
-            boost::asio::async_write(
-                stream_,
-                asio::buffer(buffer_),
+            asio::async_write(
+                s_,
+                asio::buffer(buf_),
                 std::move(self));
 
             // Read the CONNECT reply
             if (ec.failed())
                 goto complete;
-            buffer_.resize(22);
+            buf_.resize(22);
             BOOST_ASIO_HANDLER_LOCATION((
                 __FILE__, __LINE__,
                 "asio::async_read"));
             BOOST_ASIO_CORO_YIELD
             asio::async_read(
-                stream_,
-                asio::buffer(buffer_),
+                s_,
+                asio::buffer(buf_),
                 std::move(self)
             );
             // Handle successful CONNECT reply
@@ -430,30 +341,31 @@ public:
                 // to find out what kind of error
                 goto complete;
             }
-            BOOST_ASSERT(buffer_.capacity() >= n);
-            buffer_.resize(n);
-            std::tie(ec, ep) = parse_reply_v5(buffer_);
+            BOOST_ASSERT(buf_.capacity() >= n);
+            buf_.resize(n);
+            ep = parse_reply_v5(
+                buf_.data(), buf_.size(), ec);
         complete:
             {
                 // Free memory before invoking the handler
-                decltype(buffer_) tmp( std::move(buffer_) );
+                decltype(buf_) tmp( std::move(buf_) );
             }
             return self.complete(ec, ep);
         }
     }
 
 private:
-    Stream& stream_;
-    std::vector<unsigned char, Allocator> buffer_;
-    Endpoint target_host_;
+    Stream& s_;
+    std::vector<unsigned char, Allocator> buf_;
+    Endpoint target_;
     AuthOptions opt_;
-    boost::asio::coroutine coro_;
+    asio::coroutine coro_;
 };
 
 template <class AsyncStream, class Endpoint, class AuthOptions, class CompletionToken>
 typename asio::async_result<
     typename asio::decay<CompletionToken>::type,
-    void (error_code, asio::ip::tcp::endpoint)
+    void (error_code, endpoint)
     >::return_type
 async_connect_v5_any(
     AsyncStream& s,
@@ -464,7 +376,7 @@ async_connect_v5_any(
     using DecayedToken =
         typename std::decay<CompletionToken>::type;
     using allocator_type =
-        boost::allocator_rebind_t<
+        allocator_rebind_t<
             typename asio::associated_allocator<
                 DecayedToken>::type, unsigned char>;
     // async_initiate will:
@@ -472,7 +384,7 @@ async_connect_v5_any(
     // - call initiation_fn(handler, args...)
     return asio::async_compose<
         CompletionToken,
-        void (error_code, asio::ip::tcp::endpoint)>
+        void (error_code, endpoint)>
         (
             // implementation of the composed asynchronous operation
             detail::connect_v5_implementation<

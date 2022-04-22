@@ -43,6 +43,14 @@ public:
         good(reply_code_v4::request_rejected_or_failed);
         good(reply_code_v4::cannot_connect_to_identd_on_the_client);
         good(reply_code_v4::client_and_identd_report_different_user_ids);
+
+        auto const bad =
+            [&](reply_code_v4 v)
+        {
+            BOOST_TEST(to_string(v) == "Unassigned");
+        };
+        bad(reply_code_v4::unassigned);
+        bad(static_cast<reply_code_v4>(0xFE));
     }
 
     void

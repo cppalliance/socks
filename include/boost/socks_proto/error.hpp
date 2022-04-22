@@ -19,16 +19,16 @@ namespace boost {
 namespace socks_proto {
 
 /// The type of error code used by the library
-using error_code = boost::system::error_code;
+using error_code = system::error_code;
 
 /// The type of system error thrown by the library
-using system_error = boost::system::system_error;
+using system_error = system::system_error;
 
 /// The type of error category used by the library
-using error_category = boost::system::error_category;
+using error_category = system::error_category;
 
 /// The type of error condition used by the library
-using error_condition = boost::system::error_condition;
+using error_condition = system::error_condition;
 
 } // socks_proto
 } // boost

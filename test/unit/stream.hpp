@@ -5,10 +5,11 @@
 // https://www.boost.org/LICENSE_1_0.txt
 //
 
-#ifndef BOOST_SOCKS_PROTO_STREAM_HPP
-#define BOOST_SOCKS_PROTO_STREAM_HPP
+#ifndef  BOOST_SOCKS_PROTO_TEST_UNIT_STREAM_HPP
+#define  BOOST_SOCKS_PROTO_TEST_UNIT_STREAM_HPP
 
 #include <boost/asio/io_context.hpp>
+#include <boost/socks_proto/error.hpp>
 #include <tuple>
 
 namespace boost {
@@ -127,7 +128,7 @@ public:
 
     explicit
     stream(asio::io_context& io_context)
-    : io_context_(io_context)
+    : io_(io_context)
     {
     }
 
@@ -135,7 +136,7 @@ public:
     executor_type
     get_executor() noexcept
     {
-        return io_context_.get_executor();
+        return io_.get_executor();
     }
 
     // SyncReadStream
@@ -144,9 +145,9 @@ public:
     read_some(const MutableBufferSequence& buffers)
     {
         std::size_t n = asio::buffer_copy(buffers,
-            asio::buffer(read_data_, read_length_) + read_position_,
-            read_next_length_);
-        read_position_ += n;
+            asio::buffer(rbuf_, rcap_) + rpos_,
+            rnext_);
+        rpos_ += n;
         return n;
     }
 
@@ -155,11 +156,11 @@ public:
     std::size_t
     read_some(
         const MutableBufferSequence& buffers,
-        system::error_code& ec)
+        error_code& ec)
     {
-        ec = system::error_code{};
-        std::size_t n = read_some(buffers);
-        if (read_position_ == read_length_)
+        ec = rec_;
+        std::size_t n = this->read_some(buffers);
+        if (!ec.failed() && rpos_ == rcap_)
             ec = asio::error::eof;
         return n;
     }
@@ -170,9 +171,9 @@ public:
     write_some(const ConstBufferSequence& buffers)
     {
         size_t n = asio::buffer_copy(
-            asio::buffer(write_data_, write_length_) + write_position_,
-            buffers, write_next_length_);
-        write_position_ += n;
+            asio::buffer(wbuf_, wcap_) + wpos_,
+            buffers, wnext_);
+        wpos_ += n;
         return n;
     }
 
@@ -181,10 +182,10 @@ public:
     std::size_t
     write_some(
         const ConstBufferSequence& buffers,
-        system::error_code& ec)
+        error_code& ec)
     {
-        ec = system::error_code();
-        return write_some(buffers);
+        ec = wec_;
+        return this->write_some(buffers);
     }
 
     // AsyncReadStream
@@ -194,12 +195,12 @@ public:
         const MutableBufferSequence& buffers,
         Handler&& handler)
     {
-        std::size_t bytes_transferred = read_some(buffers);
+        std::size_t bytes_transferred = this->read_some(buffers);
         asio::post(
             get_executor(),
             bind_handler(
                 std::move(handler),
-                system::error_code(),
+                rec_,
                 bytes_transferred));
     }
 
@@ -210,76 +211,63 @@ public:
         const ConstBufferSequence& buffers,
         Handler&& handler)
     {
-        std::size_t bytes_transferred = write_some(buffers);
+        std::size_t bytes_transferred = this->write_some(buffers);
         asio::post(get_executor(),
             asio::detail::bind_handler(
                 std::move(handler),
-                system::error_code(),
+                wec_,
                 bytes_transferred));
     }
 
     void
     reset_read(const void* data, std::size_t length)
     {
-        BOOST_ASSERT(length <= max_length);
-        std::memcpy(read_data_, data, length);
-        read_length_ = length;
-        read_position_ = 0;
-        read_next_length_ = length;
+        if (data)
+        {
+            BOOST_ASSERT(length <= max_cap_);
+            std::memcpy(rbuf_, data, length);
+        }
+        else
+        {
+            length = 0;
+        }
+        rcap_ = length;
+        rpos_ = 0;
+        rnext_ = length;
     }
 
     void
-    reset_write(std::size_t length = max_length)
+    reset_write(std::size_t length = max_cap_)
     {
-        BOOST_ASSERT(length <= max_length);
-        memset(write_data_, 0, max_length);
-        write_length_ = length;
-        write_position_ = 0;
-        write_next_length_ = length;
+        BOOST_ASSERT(length <= max_cap_);
+        memset(wbuf_, 0, max_cap_);
+        wcap_ = length;
+        wpos_ = 0;
+        wnext_ = length;
+    }
+
+    void
+    reset_read_ec(error_code ec)
+    {
+        rec_ = ec;
+    }
+
+    void
+    reset_write_ec(error_code ec)
+    {
+        wec_ = ec;
     }
 
     void next_read_length(std::size_t length)
     {
-        read_next_length_ = length;
+        rnext_ = length;
     }
 
     void next_write_length(std::size_t length)
     {
-        write_next_length_ = length;
+        wnext_ = length;
     }
 
-    template <typename Iterator>
-    static
-    bool
-    equal_buffers(
-        Iterator begin,
-        Iterator end,
-        std::size_t length,
-        unsigned char* buf_data,
-        std::size_t buf_length)
-    {
-        if (length != buf_length)
-            return false;
-        Iterator buf_iter = begin;
-        std::size_t checked_length = 0;
-        while (
-            buf_iter != end &&
-            checked_length < length)
-        {
-            std::size_t buffer_length =
-                asio::buffer_size(*buf_iter);
-            if (buffer_length > length - checked_length)
-                buffer_length = length - checked_length;
-            if (std::memcmp(
-                    buf_data + checked_length,
-                    buf_iter->data(),
-                    buffer_length) != 0)
-                return false;
-            checked_length += buffer_length;
-            ++buf_iter;
-        }
-        return true;
-    }
 
     template <typename Iterator>
     bool
@@ -292,8 +280,8 @@ public:
             begin,
             end,
             length,
-            read_data_,
-            read_position_);
+            rbuf_,
+            rpos_);
     }
 
     template <typename Iterator>
@@ -307,8 +295,8 @@ public:
             begin,
             end,
             length,
-            write_data_,
-            write_position_);
+            wbuf_,
+            wpos_);
     }
 
     template <typename ConstBufferSequence>
@@ -358,24 +346,61 @@ public:
     }
 
 private:
-    asio::io_context& io_context_;
+    template <typename Iterator>
+    static
+    bool
+    equal_buffers(
+        Iterator begin,
+        Iterator end,
+        std::size_t length,
+        unsigned char* buf_data,
+        std::size_t buf_length)
+    {
+        if (length != buf_length)
+            return false;
+        Iterator buf_iter = begin;
+        std::size_t checked_length = 0;
+        while (
+            buf_iter != end &&
+            checked_length < length)
+        {
+            std::size_t buffer_length =
+                asio::buffer_size(*buf_iter);
+            if (buffer_length > length - checked_length)
+                buffer_length = length - checked_length;
+            if (std::memcmp(
+                    buf_data + checked_length,
+                    buf_iter->data(),
+                    buffer_length) != 0)
+                return false;
+            checked_length += buffer_length;
+            ++buf_iter;
+        }
+        return true;
+    }
 
-    static constexpr std::size_t max_length = 8192;
+
+
+    asio::io_context& io_;
+
+    static constexpr std::size_t max_cap_ = 8192;
 
     // Read
-    unsigned char read_data_[max_length];
-    std::size_t read_length_{0};
-    std::size_t read_position_{0};
-    std::size_t read_next_length_{0};
+    unsigned char rbuf_[max_cap_];
+    std::size_t rcap_{0};
+    std::size_t rpos_{0};
+    std::size_t rnext_{0};
+    error_code rec_{};
 
     // Write
-    unsigned char write_data_[max_length];
-    std::size_t write_length_{max_length};
-    std::size_t write_position_{0};
-    std::size_t write_next_length_{max_length};
+    unsigned char wbuf_[max_cap_];
+    std::size_t wcap_{max_cap_};
+    std::size_t wpos_{0};
+    std::size_t wnext_{max_cap_};
+    error_code wec_{};
 };
 } // test
 } // socks_proto
 } // boost
 
-#endif //BOOST_SOCKS_PROTO_STREAM_HPP
+#endif // BOOST_SOCKS_PROTO_TEST_UNIT_STREAM_HPP

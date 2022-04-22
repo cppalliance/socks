@@ -8,19 +8,5 @@
 // Official repository: https://github.com/alandefreitas/socks_proto
 //
 
-#ifndef BOOST_SOCKS_PROTO_STRING_VIEW_HPP
-#define BOOST_SOCKS_PROTO_STRING_VIEW_HPP
-
-#include <boost/socks_proto/detail/config.hpp>
-#include <boost/core/detail/string_view.hpp>
-
-namespace boost {
-namespace socks_proto {
-
-/// Type used to represent string views
-using string_view = core::string_view;
-
-} // socks_proto
-} // boost
-
-#endif
+// Test that header file is self-contained.
+#include <boost/socks_proto/io/endpoint.hpp>

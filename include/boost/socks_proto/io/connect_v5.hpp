@@ -11,10 +11,10 @@
 #define BOOST_SOCKS_PROTO_IO_CONNECT_V5_HPP
 
 #include <boost/socks_proto/detail/config.hpp>
+#include <boost/socks_proto/io/endpoint.hpp>
+#include <boost/socks_proto/io/auth.hpp>
 #include <boost/socks_proto/string_view.hpp>
 #include <boost/socks_proto/error.hpp>
-#include <boost/socks_proto/io/auth.hpp>
-
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
@@ -56,10 +56,10 @@ namespace io {
         SOCKS: A protocol for TCP proxy across firewalls</a>
 */
 template <class SyncStream, class AuthOptions>
-asio::ip::tcp::endpoint
+endpoint
 connect_v5(
     SyncStream& s,
-    asio::ip::tcp::endpoint const& ep,
+    endpoint const& ep,
     AuthOptions opt,
     error_code& ec);
 
@@ -101,7 +101,7 @@ connect_v5(
         SOCKS: A protocol for TCP proxy across firewalls</a>
 */
 template <class SyncStream, class AuthOptions>
-asio::ip::tcp::endpoint
+endpoint
 connect_v5(
     SyncStream& s,
     string_view app_domain,
@@ -133,7 +133,7 @@ connect_v5(
     boost::asio::connect(s, resolver.resolve(socks_host, socks_service));
     socks_io::async_connect_v5(
         s, app_host_endpoint, "username", ec,
-        [](error_code ec, asio::ip::tcp::endpoint ep)
+        [](error_code ec, endpoint ep)
     {
         if (!ec.failed())
         {
@@ -156,11 +156,11 @@ connect_v5(
 template <class AsyncStream, class AuthOptions, class CompletionToken>
 typename asio::async_result<
     typename asio::decay<CompletionToken>::type,
-    void (error_code, asio::ip::tcp::endpoint)
+    void (error_code, endpoint)
 >::return_type
 async_connect_v5(
     AsyncStream& s,
-    asio::ip::tcp::endpoint const& ep,
+    endpoint const& ep,
     AuthOptions opt,
     CompletionToken&& token);
 
@@ -193,7 +193,7 @@ async_connect_v5(
     boost::asio::connect(s, resolver.resolve(socks_host, socks_service));
     socks_io::async_connect_v5(
         s, "www.example.com", 80, "username", ec,
-        [](error_code ec, asio::ip::tcp::endpoint ep)
+        [](error_code ec, endpoint ep)
     {
         if (!ec.failed())
         {
@@ -217,7 +217,7 @@ async_connect_v5(
 template <class AsyncStream, class AuthOptions, class CompletionToken>
 typename asio::async_result<
     typename asio::decay<CompletionToken>::type,
-    void (error_code, asio::ip::tcp::endpoint)
+    void (error_code, endpoint)
 >::return_type
 async_connect_v5(
     AsyncStream& s,

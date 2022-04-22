@@ -58,6 +58,9 @@ function(boost_socks_proto_setup_properties target)
             Boost::exception
     )
 
+    find_package (Threads)
+    target_link_libraries(${target} PUBLIC Threads::Threads)
+
     if (MINGW)
         target_link_libraries(${target} PUBLIC ws2_32 mswsock)
     endif()

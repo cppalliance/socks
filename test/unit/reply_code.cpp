@@ -53,6 +53,14 @@ public:
         good(reply_code::ttl_expired);
         good(reply_code::command_not_supported);
         good(reply_code::address_type_not_supported);
+
+        auto const bad =
+            [&](reply_code v)
+        {
+            BOOST_TEST(to_string(v) == "Unassigned");
+        };
+        bad(reply_code::unassigned);
+        bad(static_cast<reply_code>(0xFE));
     }
 
     void

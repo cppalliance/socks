@@ -11,11 +11,12 @@
 #define BOOST_SOCKS_PROTO_IO_IMPL_CONNECT_V4_HPP
 
 #include <boost/socks_proto/detail/config.hpp>
-#include <boost/core/allocator_access.hpp>
+#include <boost/socks_proto/io/endpoint.hpp>
 #include <boost/socks_proto/io/detail/connect_v4.hpp>
 #include <boost/asio/error.hpp>
 #include <boost/asio/compose.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/core/allocator_access.hpp>
 
 #include <string>
 
@@ -27,10 +28,10 @@ namespace io {
 // be encapsulated into socks_proto::request
 // in the future.
 template <class SyncStream>
-asio::ip::tcp::endpoint
+endpoint
 connect_v4(
     SyncStream& stream,
-    asio::ip::tcp::endpoint const& target_host,
+    endpoint const& target_host,
     string_view socks_user,
     error_code& ec)
 {
@@ -47,10 +48,8 @@ connect_v4(
         stream,
         asio::buffer(buffer),
         ec);
-    if (ec)
-    {
-        return asio::ip::tcp::endpoint{};
-    }
+    if (ec.failed())
+        return endpoint{};
 
     // Read the CONNECT reply
     buffer.resize(8);
@@ -58,30 +57,17 @@ connect_v4(
         stream,
         asio::buffer(buffer.data(), buffer.size()),
         ec);
-    if (ec == asio::error::eof)
-    {
-        // asio::error::eof indicates there was
-        // a SOCKS error and the server
-        // closed the connection cleanly
-        return asio::ip::tcp::endpoint{};
-    }
-    else if (ec)
-    {
-        // read failed
-        return asio::ip::tcp::endpoint{};
-    }
+    if (ec.failed() && ec != asio::error::eof)
+        return endpoint{};
 
     // Parse the CONNECT reply
     buffer.resize(n);
-    auto r = detail::parse_reply_v4(buffer);
-    if (!ec)
-        ec = r.first;
-
-    return r.second;
+    return detail::parse_reply_v4(
+        buffer.data(), buffer.size(), ec);
 }
 
 template <class SyncStream>
-asio::ip::tcp::endpoint
+endpoint
 connect_v4(
     SyncStream& stream,
     string_view target_host,
@@ -99,13 +85,12 @@ connect_v4(
             std::to_string(target_port),
             ec);
     if (ec)
-    {
-        return asio::ip::tcp::endpoint{};
-    }
+        return endpoint{};
+
     auto it = endpoints.begin();
     while (it != endpoints.end())
     {
-        asio::ip::tcp::endpoint ep = it->endpoint();
+        endpoint ep = it->endpoint();
         ++it;
         // SOCKS4 does not support IPv6 addresses
         if (ep.address().is_v6())
@@ -125,7 +110,7 @@ connect_v4(
         else
             return ep;
     }
-    return asio::ip::tcp::endpoint{};
+    return endpoint{};
 }
 
 // SOCKS4 connect initiating function
@@ -137,18 +122,18 @@ connect_v4(
 template <class AsyncStream, class CompletionToken>
 typename asio::async_result<
     typename asio::decay<CompletionToken>::type,
-    void (error_code, asio::ip::tcp::endpoint)
+    void (error_code, endpoint)
 >::return_type
 async_connect_v4(
     AsyncStream& s,
-    asio::ip::tcp::endpoint const& target_host,
+    endpoint const& target_host,
     string_view socks_user,
     CompletionToken&& token)
 {
     using DecayedToken =
         typename std::decay<CompletionToken>::type;
     using allocator_type =
-        boost::allocator_rebind_t<
+        allocator_rebind_t<
             typename asio::associated_allocator<
                 DecayedToken>::type, unsigned char>;
     // async_initiate will:
@@ -156,7 +141,7 @@ async_connect_v4(
     // - call initiation_fn(handler, args...)
     return asio::async_compose<
             CompletionToken,
-            void (error_code, asio::ip::tcp::endpoint)>
+            void (error_code, endpoint)>
     (
         // implementation of the composed asynchronous operation
         detail::connect_v4_implementation<
@@ -177,7 +162,7 @@ async_connect_v4(
 template <class AsyncStream, class CompletionToken>
 typename asio::async_result<
     typename asio::decay<CompletionToken>::type,
-    void (error_code, asio::ip::tcp::endpoint)
+    void (error_code, endpoint)
     >::return_type
 async_connect_v4(
     AsyncStream& s,
@@ -192,7 +177,7 @@ async_connect_v4(
     using DecayedToken =
         typename std::decay<CompletionToken>::type;
     using allocator_type =
-        boost::allocator_rebind_t<
+        allocator_rebind_t<
             typename asio::associated_allocator<
                 DecayedToken>::type, unsigned char>;
     // async_initiate will:
@@ -200,7 +185,7 @@ async_connect_v4(
     // - call initiation_fn(handler, args...)
     return asio::async_compose<
             CompletionToken,
-            void (error_code, asio::ip::tcp::endpoint)>
+            void (error_code, endpoint)>
     (
         // implementation of the composed asynchronous operation
         detail::resolve_and_connect_v4_implementation<

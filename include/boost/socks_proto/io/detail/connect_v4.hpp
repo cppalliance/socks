@@ -11,6 +11,7 @@
 #define BOOST_SOCKS_PROTO_IO_DETAIL_CONNECT_V4_HPP
 
 #include <boost/socks_proto/detail/config.hpp>
+
 #include <boost/socks_proto/string_view.hpp>
 #include <boost/socks_proto/error.hpp>
 #include <boost/socks_proto/reply_code.hpp>
@@ -24,6 +25,9 @@
 #include <boost/asio/write.hpp>
 
 #include <boost/core/empty_value.hpp>
+#include <boost/core/allocator_access.hpp>
+
+#include <string>
 
 namespace boost {
 namespace socks_proto {
@@ -38,12 +42,12 @@ namespace detail {
 template <class Allocator = std::allocator<unsigned char>>
 std::vector<unsigned char, Allocator>
 prepare_request_v4(
-    boost::asio::ip::tcp::endpoint const& target_host,
-    boost::core::string_view socks_user,
+    asio::ip::tcp::endpoint const& target_host,
+    core::string_view socks_user,
     Allocator const& a = {})
 {
     std::vector<unsigned char, Allocator> buffer(
-        9 + socks_user.size(), a);
+        9 + socks_user.size(), 0x00, a);
 
     // Prepare a CONNECT request
     // VER
@@ -77,79 +81,12 @@ prepare_request_v4(
     return buffer;
 }
 
-template <class Allocator = std::allocator<unsigned char>>
-std::pair<
-    boost::system::error_code,
-    boost::asio::ip::tcp::endpoint>
-parse_reply_v4(std::vector<unsigned char, Allocator> const& buffer)
-{
-    using error_code = boost::system::error_code;
-    namespace asio = boost::asio;
-    using tcp = boost::asio::ip::tcp;
-
-    if (buffer.size() < 2)
-    {
-        // Successful messages have size 8
-        // Some servers return only 2 bytes,
-        // since DSTPORT and DSTIP can be ignored
-        // in SOCKS4 or to return error messages,
-        // including SOCKS5 errors
-        return {
-            asio::error::access_denied,
-            tcp::endpoint{} };
-    }
-
-    // VER:
-    if (buffer[0] == 50)
-    {
-        // We are trying to connect to a SOCKS5
-        // server
-        error_code ec =
-            boost::socks_proto::to_reply_code(buffer[1]);
-        return {ec, tcp::endpoint{}};
-    }
-
-    // In SOCKS4, the reply version is allowed to
-    // be 0x00. In general, this is the SOCKS version as
-    // 40.
-    if (buffer[0] != 0x00 && buffer[0] != 40)
-    {
-        error_code ec =
-            boost::socks_proto::to_reply_code_v4(buffer[1]);
-        return {ec, tcp::endpoint{}};
-    }
-
-    // REP: the res
-    auto rep = boost::socks_proto::to_reply_code_v4(buffer[1]);
-    if (rep != boost::socks_proto::reply_code_v4::request_granted)
-    {
-        error_code ec =
-            boost::socks_proto::to_reply_code_v4(buffer[1]);
-        return {ec, tcp::endpoint{}};
-    }
-
-    // DSTPORT and DSTIP might be ignored
-    // in SOCKS4, which does not represent
-    // an error
-    if (buffer.size() < 8)
-        return {error_code{}, tcp::endpoint{}};
-
-    // DSTPORT
-    std::uint16_t port{buffer[2]};
-    port = (port << 8) | buffer[3];
-
-    // DSTIP
-    std::uint32_t ip{buffer[3]};
-    ip = (ip << 8) | buffer[4];
-    ip = (ip << 8) | buffer[5];
-    ip = (ip << 8) | buffer[6];
-
-    tcp::endpoint ep{
-        asio::ip::make_address_v4(ip),
-        port
-    };
-    return {error_code{}, ep};
-}
+BOOST_SOCKS_PROTO_DECL
+asio::ip::tcp::endpoint
+parse_reply_v4(
+    unsigned char const* buffer,
+    std::size_t n,
+    error_code& ec);
 
 template <class Stream, class Allocator>
 class connect_v4_implementation
@@ -160,8 +97,8 @@ public:
         asio::ip::tcp::endpoint target_host,
         string_view socks_user,
         Allocator const& a)
-        : stream_(s)
-        , buffer_(prepare_request_v4(target_host, socks_user, a))
+        : s_(s)
+        , buf_(prepare_request_v4(target_host, socks_user, a))
     {
     }
 
@@ -180,24 +117,24 @@ public:
                 __FILE__, __LINE__,
                 "asio::async_write"));
             BOOST_ASIO_CORO_YIELD
-            boost::asio::async_write(
-                stream_,
-                asio::buffer(buffer_),
+            asio::async_write(
+                s_,
+                asio::buffer(buf_),
                 std::move(self));
             // Handle successful CONNECT request
             // Prepare for CONNECT reply
             if (ec.failed())
                 goto complete;
-            BOOST_ASSERT(buffer_.capacity() >= 8);
-            buffer_.resize(8);
+            BOOST_ASSERT(buf_.capacity() >= 8);
+            buf_.resize(8);
             // Read the CONNECT reply
             BOOST_ASIO_HANDLER_LOCATION((
                 __FILE__, __LINE__,
                 "asio::async_read"));
             BOOST_ASIO_CORO_YIELD
             asio::async_read(
-                stream_,
-                asio::buffer(buffer_),
+                s_,
+                asio::buffer(buf_),
                 std::move(self)
             );
             // Handle successful CONNECT reply
@@ -211,33 +148,36 @@ public:
                 // to find out what kind of error
                 goto complete;
             }
-            BOOST_ASSERT(buffer_.capacity() >= n);
-            buffer_.resize(n);
+            BOOST_ASSERT(buf_.capacity() >= n);
+            buf_.resize(n);
             {
                 error_code rec;
-                std::tie(rec, ep) = parse_reply_v4(buffer_);
+                ep = parse_reply_v4(
+                    buf_.data(),
+                    buf_.size(),
+                    rec);
                 if (rec.failed() &&
-                    rec != socks_proto::reply_code_v4::unassigned)
+                    rec != reply_code_v4::unassigned)
                     ec = rec;
             }
         complete:
             {
                 // Free memory before invoking the handler
-                decltype(buffer_) tmp( std::move(buffer_) );
+                decltype(buf_) tmp( std::move(buf_) );
             }
             return self.complete(ec, ep);
         }
     }
 
 private:
-    Stream& stream_;
-    std::vector<unsigned char, Allocator> buffer_;
-    boost::asio::coroutine coro_;
+    Stream& s_;
+    std::vector<unsigned char, Allocator> buf_;
+    asio::coroutine coro_;
 };
 
 template <class Stream, class Allocator>
 class resolve_and_connect_v4_implementation
-    : private boost::empty_value<Allocator, 0>
+    : private empty_value<Allocator, 0>
 {
 public:
     resolve_and_connect_v4_implementation(
@@ -246,8 +186,8 @@ public:
         std::uint16_t app_port,
         string_view socks_user,
         Allocator const& a)
-        : boost::empty_value<Allocator, 0>(boost::empty_init, a)
-        , stream_(s)
+        : empty_value<Allocator, 0>(empty_init, a)
+        , s_(s)
         , app_domain_(app_domain, allocator_rebind_t<Allocator, char>(a))
         , app_port_(std::to_string(app_port), allocator_rebind_t<Allocator, char>(a))
         , socks_user_(socks_user, allocator_rebind_t<Allocator, char>(a))
@@ -292,7 +232,7 @@ public:
                     __FILE__, __LINE__,
                     "socks_proto::connect_v4"));
                 async_connect_v4(
-                    stream_,
+                    s_,
                     e,
                     socks_user_,
                     std::move(self)
@@ -331,7 +271,7 @@ public:
     }
 
 private:
-    Stream& stream_;
+    Stream& s_;
     using io_string_type =
         std::basic_string<
             char,

@@ -25,7 +25,9 @@ public:
     {
         std::stringstream ss;
         ss << v;
-        BOOST_TEST(ss.str() == s);
+        BOOST_TEST_EQ(ss.str(), s);
+        auto b = static_cast<unsigned char>(v);
+        BOOST_TEST_EQ(v, to_address_type(b));
     }
 
     void
@@ -34,6 +36,7 @@ public:
         check(address_type::ip_v4, "IPv4");
         check(address_type::domain_name, "Domain name");
         check(address_type::ip_v6, "IPv6");
+        check(address_type::unknown, "UNKNOWN");
     }
 };
 

@@ -26,10 +26,10 @@ namespace io {
 // be encapsulated into socks_proto::request
 // in the future.
 template <class SyncStream, class AuthOptions>
-asio::ip::tcp::endpoint
+endpoint
 connect_v5(
     SyncStream& stream,
-    asio::ip::tcp::endpoint const& target_host,
+    endpoint const& target_host,
     AuthOptions opt,
     error_code& ec)
 {
@@ -38,7 +38,7 @@ connect_v5(
 }
 
 template <class SyncStream, class AuthOptions>
-asio::ip::tcp::endpoint
+endpoint
 connect_v5(
     SyncStream& stream,
     string_view target_host,
@@ -62,11 +62,11 @@ connect_v5(
 template <class AsyncStream, class AuthOptions, class CompletionToken>
 typename asio::async_result<
     typename asio::decay<CompletionToken>::type,
-    void (error_code, asio::ip::tcp::endpoint)
+    void (error_code, endpoint)
 >::return_type
 async_connect_v5(
     AsyncStream& s,
-    asio::ip::tcp::endpoint const& target_host,
+    endpoint const& target_host,
     AuthOptions opt,
     CompletionToken&& token)
 {
@@ -77,7 +77,7 @@ async_connect_v5(
 template <class AsyncStream, class AuthOptions, class CompletionToken>
 typename asio::async_result<
     typename asio::decay<CompletionToken>::type,
-    void (error_code, asio::ip::tcp::endpoint)
+    void (error_code, endpoint)
     >::return_type
 async_connect_v5(
     AsyncStream& s,

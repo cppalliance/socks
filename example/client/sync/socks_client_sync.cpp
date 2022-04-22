@@ -11,6 +11,7 @@
 #include <boost/socks_proto/reply_code_v4.hpp>
 
 #include <boost/socks_proto/io/connect_v4.hpp>
+#include <boost/socks_proto/io/connect_v5.hpp>
 
 #include <boost/url/url_view.hpp>
 
@@ -47,6 +48,20 @@ fail(beast::error_code ec, char const* what)
     return false;
 }
 
+bool
+fail(char const* what)
+{
+    std::cerr << what << "\n";
+    return false;
+}
+
+bool
+fail(char const* what, string_view value)
+{
+    std::cerr << what << ": " << value << "\n";
+    return false;
+}
+
 std::uint16_t
 default_port(const boost::urls::url_view& u)
 {
@@ -60,6 +75,24 @@ default_port(const boost::urls::url_view& u)
             return 1080;
     }
     return u.port_number();
+}
+
+tcp::endpoint
+get_endpoint_unchecked(const boost::urls::url_view& u)
+{
+    if (u.host_type() == urls::host_type::ipv4)
+    {
+        urls::ipv4_address ip =
+            urls::parse_ipv4_address(u.encoded_host()).value();
+        return tcp::endpoint{
+            ip::address_v4{ip.to_uint()},
+            default_port(u)};
+    }
+    urls::ipv6_address ip =
+        urls::parse_ipv6_address(u.encoded_host()).value();
+    return tcp::endpoint{
+        ip::address_v6{ip.to_bytes()},
+        default_port(u)};
 }
 
 bool
@@ -82,142 +115,147 @@ socks_request(
     urls::url_view socks = r.value();
     socks::version socks_version;
     if (socks.scheme() == "socks5")
-    {
         socks_version = socks::version::socks_5;
-    }
     else if (socks.scheme() == "socks4" ||
              socks.scheme() == "socks4a")
-    {
         socks_version = socks::version::socks_4;
-    }
     else
-    {
-        std::cerr <<
-            "Invalid SOCKS Scheme:"
-                  << socks.scheme() << "\n"
-            "Valid schemes: \"socks5\" and \"socks4\"\n";
-        return false;
-    }
+        return fail("Invalid SOCKS scheme: ", socks.scheme());
 
     // Validate parameters
     if (socks_version == socks::version::socks_4 &&
         target.host_type() == urls::host_type::ipv6)
-    {
-        std::cerr <<
-            "SOCKS4 does not support IPv6 addresses\n";
-        return false;
-    }
-    else if (socks_version == socks::version::socks_5)
-    {
-        std::cerr <<
-            "SOCKS5 not supported by this client\n";
-        return false;
-    }
+        return fail("SOCKS4 does not support IPv6 addresses");
 
-    // Make the connection on the SOCKS server
+    // Connect to the SOCKS server
     tcp::socket socket{ioc};
     beast::error_code ec;
-
     if (socks.host_type() == urls::host_type::name)
     {
-        // Look up the SOCKS domain name
         tcp::resolver resolver{ioc};
         auto const endpoints = resolver.resolve(
             std::string(socks.encoded_host()),
             std::to_string(default_port(socks)),
             ec);
-        if (ec)
+        if (ec.failed())
             return fail(ec, "resolve");
         asio::connect(socket, endpoints, ec);
     }
-    else if (socks.host_type() == urls::host_type::ipv4)
+    else if (socks.host_type() == urls::host_type::ipv4 ||
+             socks.host_type() == urls::host_type::ipv6)
+        socket.connect(get_endpoint_unchecked(socks), ec);
+    else
+        return fail("Unsupported host", socks.encoded_host());
+
+    if (ec.failed())
+        return fail(ec, "connect");
+
+    // Send a SOCKS connect request according to the URL
+    if (socks_version == socks::version::socks_5)
     {
-        auto ipr =
-            urls::parse_ipv4_address(socks.encoded_host());
-        if (ipr.has_error())
-        {
-            std::cerr <<
-                "Cannot parse IPv4 address " <<
-                socks.encoded_host() << "\n";
-            return false;
+        if (!socks.has_userinfo()) {
+            if (target.host_type() == urls::host_type::name)
+            {
+                socks::io::connect_v5(
+                    socket,
+                    target.encoded_host(),
+                    default_port(target),
+                    socks::io::auth::no_auth{},
+                    ec);
+            }
+            else if (target.host_type() == urls::host_type::ipv4 ||
+                     target.host_type() == urls::host_type::ipv6)
+            {
+                socks::io::connect_v5(
+                    socket,
+                    get_endpoint_unchecked(target),
+                    socks::io::auth::no_auth{},
+                    ec);
+            }
         }
-        urls::ipv4_address ip_addr{ipr.value().to_uint()};
-        tcp::endpoint ep{
-            ip::address_v4{ip_addr.to_uint()},
-            default_port(socks)};
-        socket.connect(ep, ec);
-    }
-    else if (socks.host_type() == urls::host_type::ipv6)
-    {
-        auto ipr =
-            urls::parse_ipv6_address(socks.encoded_host());
-        if (ipr.has_error())
+        else
         {
-            std::cerr <<
-                "Cannot parse IPv6 address " <<
-                socks.encoded_host() << "\n";
-            return false;
+            socks::io::auth::userpass a{
+                socks.encoded_user(),
+                socks.encoded_password(),
+            };
+            if (target.host_type() == urls::host_type::name)
+            {
+                socks::io::connect_v5(
+                    socket,
+                    target.encoded_host(),
+                    default_port(target),
+                    a,
+                    ec);
+            }
+            else if (target.host_type() == urls::host_type::ipv4 ||
+                     target.host_type() == urls::host_type::ipv6)
+            {
+                socks::io::connect_v5(
+                    socket,
+                    get_endpoint_unchecked(target),
+                    a,
+                    ec);
+            }
         }
-        urls::ipv6_address ip_addr{ipr.value().to_bytes()};
-        tcp::endpoint ep{
-            ip::address_v6{ip_addr.to_bytes()},
-            default_port(socks)};
-        socket.connect(ep, ec);
     }
     else
     {
-        std::cerr <<
-            "Unsupported host " <<
-            socks.encoded_host() << "\n";
-        return false;
+        if (target.host_type() == urls::host_type::name)
+        {
+            socks::io::connect_v4(
+                socket,
+                target.encoded_host(),
+                default_port(target),
+                socks.encoded_user(),
+                ec);
+        }
+        else if (target.host_type() == urls::host_type::ipv4 ||
+                 target.host_type() == urls::host_type::ipv6)
+        {
+            socks::io::connect_v4(
+                socket,
+                get_endpoint_unchecked(target),
+                socks.encoded_user(),
+                ec);
+        }
     }
-    if (ec)
-        return fail(ec, "connect");
-
-    // Procedure:
-    // - Handshake: SOCKS5 only
-    // - Authentication: SOCKS5 only
-    // - Connect: SOCKS4 and SOCKS5
-
-    // Continue with SOCKS4 procedure, as
-    // SOCKS5 is not supported yet
-    socks::io::connect_v4(
-        socket,
-        target.encoded_host(),
-        default_port(target),
-        socks.encoded_user(),
-        ec);
-    if (ec)
-        return fail(ec, "connect_v4");
+    if (ec.failed())
+        return fail(ec, "socks_connect");
 
     /*
      * After this point, we can talk to the
      * SOCKS server as if we were talking to
-     * the the application server.
+     * the application server.
      */
 
     // Set up an HTTP GET request
-    http::request<http::string_body> req
-        {http::verb::get, target.encoded_host(), http_version};
+    http::request<http::string_body> req{
+        http::verb::get,
+        target.encoded_path(),
+        http_version
+    };
     req.set(http::field::host, target.encoded_host());
     req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
+    std::cout << req << std::endl;
 
     // Send the HTTP request
     http::write(socket, req, ec);
-    if(ec)
+    if (ec.failed())
         return fail(ec, "write");
 
     // Read the HTTP response
     beast::flat_buffer b;
     http::response<http::dynamic_body> res;
     http::read(socket, b, res, ec);
-    if(ec)
+    if (ec.failed() &&
+        ec != beast::http::error::end_of_stream)
         return fail(ec, "read");
     std::cout << res << std::endl;
 
     // Close the socket
     socket.shutdown(tcp::socket::shutdown_both, ec);
-    if(ec && ec != beast::errc::not_connected)
+    if(ec.failed() && ec != beast::errc::not_connected)
         return fail(ec, "shutdown");
 
     // If we get here, then everything went fine

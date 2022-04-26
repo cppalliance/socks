@@ -9,6 +9,7 @@
 #define BOOST_SOCKS_PROTO_IO_DETAIL_IMPL_CONNECT_V4_IPP
 
 #include <boost/socks_proto/io/detail/connect_v4.hpp>
+#include <boost/core/ignore_unused.hpp>
 
 namespace boost {
 namespace socks_proto {
@@ -79,6 +80,21 @@ parse_reply_v4(
     };
     ec = {};
     return ep;
+}
+
+std::string
+to_string(std::uint16_t v)
+{
+#if (defined(__MINGW32__) || defined(MINGW32) || defined(BOOST_MINGW32))
+    constexpr int bn = 4 * sizeof(std::uint16_t);
+    char str[bn];
+    int n = std::snprintf(str, bn, "%d", v);
+    BOOST_ASSERT(n <= bn);
+    boost::ignore_unused(n);
+    return std::string(str);
+#else
+    return std::to_string(v);
+#endif
 }
 
 } // detail

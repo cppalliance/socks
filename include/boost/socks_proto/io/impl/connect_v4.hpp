@@ -18,8 +18,6 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/core/allocator_access.hpp>
 
-#include <string>
-
 namespace boost {
 namespace socks_proto {
 namespace io {
@@ -82,9 +80,9 @@ connect_v4(
     asio::ip::tcp::resolver::results_type endpoints =
         resolver.resolve(
             std::string(target_host),
-            std::to_string(target_port),
+            detail::to_string(target_port),
             ec);
-    if (ec)
+    if (ec.failed())
         return endpoint{};
 
     auto it = endpoints.begin();
@@ -95,7 +93,7 @@ connect_v4(
         // SOCKS4 does not support IPv6 addresses
         if (ep.address().is_v6())
         {
-            if (!ec)
+            if (!ec.failed())
                 ec = asio::error::host_not_found;
             continue;
         }
@@ -105,7 +103,7 @@ connect_v4(
             ep,
             socks_user,
             ec);
-        if (ec)
+        if (ec.failed())
             continue;
         else
             return ep;
@@ -194,6 +192,7 @@ async_connect_v4(
                 app_domain,
                 app_port,
                 ident_id,
+                s.get_executor(),
                 asio::get_associated_allocator(token)
             },
         // the completion token

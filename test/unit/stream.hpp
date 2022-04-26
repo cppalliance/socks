@@ -49,7 +49,7 @@ using make_index_sequence =
 template <class Handler, class... Args>
 struct bound_handler {
     explicit
-    bound_handler(Handler& handler, const Args&... args)
+    bound_handler(Handler&& handler, const Args&... args)
         : handler_(std::move(handler))
         , args_(std::make_tuple(args...))
     {
@@ -111,7 +111,7 @@ inline
 bound_handler<
     typename std::decay<Handler>::type,
     Args...>
-bind_handler(Handler&& handler, Args&&... args)
+bind_handler(Handler&& handler, Args... args)
 {
   return bound_handler<
       typename std::decay<Handler>::type,
@@ -128,7 +128,7 @@ public:
 
     explicit
     stream(asio::io_context& io_context)
-    : io_(io_context)
+    : ioc_(io_context)
     {
     }
 
@@ -136,7 +136,7 @@ public:
     executor_type
     get_executor() noexcept
     {
-        return io_.get_executor();
+        return ioc_.get_executor();
     }
 
     // SyncReadStream
@@ -381,7 +381,7 @@ private:
 
 
 
-    asio::io_context& io_;
+    asio::io_context& ioc_;
 
     static constexpr std::size_t max_cap_ = 8192;
 

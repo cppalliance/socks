@@ -42,7 +42,10 @@ public:
         auto const good =
             [&](reply_code v)
             {
-                BOOST_TEST(to_string(v) != "Unassigned");
+                BOOST_TEST_NE(to_string(v), "Unassigned");
+                std::stringstream ss;
+                ss << v;
+                BOOST_TEST_EQ(to_string(v), ss.str());
             };
         good(reply_code::succeeded);
         good(reply_code::general_failure);

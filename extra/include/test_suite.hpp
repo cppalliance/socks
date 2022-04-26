@@ -11,6 +11,7 @@
 #define TEST_SUITE_HPP
 
 #include <boost/type_traits/make_void.hpp>
+#include <boost/system/error_code.hpp>
 
 #include <algorithm>
 #include <atomic>
@@ -475,6 +476,18 @@ inline std::string test_output_impl( char const& v )
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
+
+inline
+std::string
+test_output_impl( boost::system::error_code v )
+{
+    std::stringstream ss;
+    ss << v.category().name()
+       << ": " << v.message()
+       << " (" << v.value() << ")";
+    return ss.str();
+}
+
 
 //----------------------------------------------------------
 

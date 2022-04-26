@@ -135,11 +135,11 @@ public:
             asio::async_read(
                 s_,
                 asio::buffer(buf_),
-                std::move(self)
-            );
+                std::move(self));
             // Handle successful CONNECT reply
             // Parse the CONNECT reply
-            if (ec.failed() && ec != asio::error::eof)
+            if (ec.failed() &&
+                ec != asio::error::eof)
             {
                 // asio::error::eof indicates there was
                 // a SOCKS error and the server
@@ -175,6 +175,12 @@ private:
     asio::coroutine coro_;
 };
 
+// A small version of to_string used to avoid a
+// common bug on MinGw.
+BOOST_SOCKS_PROTO_DECL
+std::string
+to_string(std::uint16_t v);
+
 template <class Stream, class Allocator>
 class resolve_and_connect_v4_implementation
     : private empty_value<Allocator, 0>
@@ -185,13 +191,27 @@ public:
         string_view app_domain,
         std::uint16_t app_port,
         string_view socks_user,
+        asio::ip::tcp::resolver::executor_type const& ex,
         Allocator const& a)
         : empty_value<Allocator, 0>(empty_init, a)
         , s_(s)
-        , app_domain_(app_domain, allocator_rebind_t<Allocator, char>(a))
-        , app_port_(std::to_string(app_port), allocator_rebind_t<Allocator, char>(a))
-        , socks_user_(socks_user, allocator_rebind_t<Allocator, char>(a))
+        , app_domain_(
+            app_domain.data(),
+            app_domain.size(),
+            allocator_rebind_t<Allocator, char>(a))
+        , app_port_(allocator_rebind_t<Allocator, char>(a))
+        , socks_user_(
+            socks_user.data(),
+            socks_user.size(),
+            allocator_rebind_t<Allocator, char>(a))
+        , resolver_(ex)
     {
+        auto port = to_string(app_port);
+        app_port_.replace(
+            app_port_.begin(),
+            app_port_.end(),
+            port.begin(),
+            port.end());
     }
 
     template <typename Self>
@@ -199,12 +219,10 @@ public:
     operator()(Self& self)
     {
         state_ = resolving;
-        asio::ip::tcp::resolver resolver(
-            self.get_executor());
         BOOST_ASIO_HANDLER_LOCATION((
             __FILE__, __LINE__,
             "resolver::async_resolve"));
-        resolver.async_resolve(
+        resolver_.async_resolve(
             app_domain_,
             app_port_,
             std::move(self));
@@ -281,6 +299,7 @@ private:
     io_string_type app_domain_;
     io_string_type app_port_;
     io_string_type socks_user_;
+    asio::ip::tcp::resolver resolver_;
     enum { starting, resolving, connecting } state_{starting};
 
 };

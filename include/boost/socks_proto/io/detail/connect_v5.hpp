@@ -163,7 +163,7 @@ prepare_request_v5(
 {
     std::size_t n_dst_addr = dst_addr_size(target_host);
     std::vector<unsigned char, Allocator> buffer(
-        6 + n_dst_addr, a);
+        6 + n_dst_addr, 0x00, a);
 
     // Prepare a CONNECT request
     // VER

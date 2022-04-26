@@ -34,19 +34,12 @@ parse_reply_v5(
     }
 
     // VER:
-    if (buffer[0] == 0x04)
-    {
-        // We connected to a SOCKS4 server
-        ec = to_reply_code_v4(buffer[1]);
-        return {};
-    }
-
     // In SOCKS5, the reply version is allowed to
     // be 0x00. In general, this is the SOCKS version as
     // 40.
     if (buffer[0] != 0x05)
     {
-        ec = to_reply_code(buffer[1]);
+        ec = asio::error::no_protocol_option;
         return {};
     }
 

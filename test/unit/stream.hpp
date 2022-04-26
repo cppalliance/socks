@@ -145,9 +145,12 @@ public:
     read_some(const MutableBufferSequence& buffers)
     {
         std::size_t n = asio::buffer_copy(buffers,
-            asio::buffer(rbuf_, rcap_) + rpos_,
+            asio::buffer(rbuf_, rsize_) + rpos_,
             rnext_);
         rpos_ += n;
+        if (rpos_ == rnext_) {
+            rnext_ = rsize_ - rpos_;
+        }
         return n;
     }
 
@@ -160,7 +163,7 @@ public:
     {
         ec = rec_;
         std::size_t n = this->read_some(buffers);
-        if (!ec.failed() && rpos_ == rcap_)
+        if (!ec.failed() && rpos_ == rsize_)
             ec = asio::error::eof;
         return n;
     }
@@ -171,7 +174,7 @@ public:
     write_some(const ConstBufferSequence& buffers)
     {
         size_t n = asio::buffer_copy(
-            asio::buffer(wbuf_, wcap_) + wpos_,
+            asio::buffer(wbuf_, wsize_) + wpos_,
             buffers, wnext_);
         wpos_ += n;
         return n;
@@ -231,9 +234,25 @@ public:
         {
             length = 0;
         }
-        rcap_ = length;
+        rsize_ = length;
         rpos_ = 0;
         rnext_ = length;
+    }
+
+    void
+    append_read(const void* data, std::size_t length)
+    {
+        if (data)
+        {
+            BOOST_ASSERT(length <= max_cap_ - rsize_);
+            std::memcpy(rbuf_ + rsize_, data, length);
+        }
+        else
+        {
+            length = 0;
+        }
+        rsize_ += length;
+        rpos_ = 0;
     }
 
     void
@@ -241,7 +260,7 @@ public:
     {
         BOOST_ASSERT(length <= max_cap_);
         memset(wbuf_, 0, max_cap_);
-        wcap_ = length;
+        wsize_ = length;
         wpos_ = 0;
         wnext_ = length;
     }
@@ -267,7 +286,6 @@ public:
     {
         wnext_ = length;
     }
-
 
     template <typename Iterator>
     bool
@@ -387,14 +405,14 @@ private:
 
     // Read
     unsigned char rbuf_[max_cap_];
-    std::size_t rcap_{0};
+    std::size_t rsize_{0};
     std::size_t rpos_{0};
     std::size_t rnext_{0};
     error_code rec_{};
 
     // Write
     unsigned char wbuf_[max_cap_];
-    std::size_t wcap_{max_cap_};
+    std::size_t wsize_{max_cap_};
     std::size_t wpos_{0};
     std::size_t wnext_{max_cap_};
     error_code wec_{};

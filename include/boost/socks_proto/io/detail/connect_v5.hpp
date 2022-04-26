@@ -216,7 +216,7 @@ connect_v5_any(
         return endpoint{};
 
     // Read GREETING reply
-    buffer.resize(2);
+    buffer.resize(3);
     std::size_t n = asio::read(
         stream,
         asio::buffer(buffer),
@@ -239,7 +239,7 @@ connect_v5_any(
     buffer.resize(22);
     n = asio::read(
         stream,
-        asio::buffer(buffer.data(), n),
+        asio::buffer(buffer),
         ec);
     if (ec.failed() && ec != asio::error::eof)
         return endpoint{};
@@ -290,8 +290,8 @@ public:
             // Read GREETING reply
             if (ec.failed())
                 goto complete;
-            BOOST_ASSERT(buf_.capacity() >= 2);
-            buf_.resize(2);
+            BOOST_ASSERT(buf_.capacity() >= 3);
+            buf_.resize(3);
             BOOST_ASIO_HANDLER_LOCATION((
                 __FILE__, __LINE__,
                 "asio::async_read"));

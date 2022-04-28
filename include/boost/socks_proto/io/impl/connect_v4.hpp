@@ -64,53 +64,6 @@ connect_v4(
         buffer.data(), buffer.size(), ec);
 }
 
-template <class SyncStream>
-endpoint
-connect_v4(
-    SyncStream& stream,
-    string_view target_host,
-    std::uint16_t target_port,
-    string_view socks_user,
-    error_code& ec)
-{
-    // SOCKS4 does not support domain names
-    // The domain name needs to be resolved
-    // on the client
-    asio::ip::tcp::resolver resolver{stream.get_executor()};
-    asio::ip::tcp::resolver::results_type endpoints =
-        resolver.resolve(
-            std::string(target_host),
-            detail::to_string(target_port),
-            ec);
-    if (ec.failed())
-        return endpoint{};
-
-    auto it = endpoints.begin();
-    while (it != endpoints.end())
-    {
-        endpoint ep = it->endpoint();
-        ++it;
-        // SOCKS4 does not support IPv6 addresses
-        if (ep.address().is_v6())
-        {
-            if (!ec.failed())
-                ec = asio::error::host_not_found;
-            continue;
-        }
-        ep.port(target_port);
-        ep = connect_v4(
-            stream,
-            ep,
-            socks_user,
-            ec);
-        if (ec.failed())
-            continue;
-        else
-            return ep;
-    }
-    return endpoint{};
-}
-
 // SOCKS4 connect initiating function
 // - These overloads look similar to what we
 // should have in socks_io.
@@ -147,52 +100,6 @@ async_connect_v4(
                 s,
                 target_host,
                 socks_user,
-                asio::get_associated_allocator(token)
-            },
-        // the completion token
-        token,
-        // I/O objects or I/O executors for which
-        // outstanding work must be maintained
-        s
-    );
-}
-
-template <class AsyncStream, class CompletionToken>
-typename asio::async_result<
-    typename asio::decay<CompletionToken>::type,
-    void (error_code, endpoint)
-    >::return_type
-async_connect_v4(
-    AsyncStream& s,
-    string_view app_domain,
-    std::uint16_t app_port,
-    string_view ident_id,
-    CompletionToken&& token)
-{
-    // SOCKS4 does not support domain names
-    // The domain name needs to be resolved
-    // on the client
-    using DecayedToken =
-        typename std::decay<CompletionToken>::type;
-    using allocator_type =
-        allocator_rebind_t<
-            typename asio::associated_allocator<
-                DecayedToken>::type, unsigned char>;
-    // async_initiate will:
-    // - transform token into handler
-    // - call initiation_fn(handler, args...)
-    return asio::async_compose<
-            CompletionToken,
-            void (error_code, endpoint)>
-    (
-        // implementation of the composed asynchronous operation
-        detail::resolve_and_connect_v4_implementation<
-            AsyncStream, allocator_type>{
-                s,
-                app_domain,
-                app_port,
-                ident_id,
-                s.get_executor(),
                 asio::get_associated_allocator(token)
             },
         // the completion token

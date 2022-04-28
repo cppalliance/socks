@@ -37,10 +37,28 @@ namespace http = beast::http;
 namespace asio = boost::asio;
 namespace ip = boost::asio::ip;
 using tcp = boost::asio::ip::tcp;
-using string_view = beast::string_view;
-using error_code = boost::system::error_code;
+using string_view = socks::string_view;
+using error_code = socks::error_code;
+using endpoint = socks::io::endpoint;
 
 //------------------------------------------------------------------------------
+
+// A small version of std::to_string to avoid a
+// common bug on MinGw.
+std::string
+to_string(std::uint16_t v)
+{
+#if (defined(__MINGW32__) || defined(MINGW32) || defined(BOOST_MINGW32))
+    constexpr int bn = 4 * sizeof(std::uint16_t);
+    char str[bn];
+    int n = std::snprintf(str, bn, "%d", v);
+    BOOST_ASSERT(n <= bn);
+    boost::ignore_unused(n);
+    return std::string(str);
+#else
+    return std::to_string(v);
+#endif
+}
 
 std::uint16_t
 default_port(const boost::urls::url_view& u)
@@ -216,12 +234,39 @@ private:
         {
             if (target_.host_type() == urls::host_type::name)
             {
-                socks::io::async_connect_v4(
-                    socket_,
-                    target_.encoded_host(),
-                    default_port(target_),
-                    socks_.encoded_user(),
-                    cb);
+                // SOCKS4 does not support domain names.
+                // The domain name needs to be resolved
+                // on the client.
+                std::size_t port = default_port(target_);
+                std::string port_str = to_string(port);
+                using resolve_results =
+                    asio::ip::tcp::resolver::results_type;
+                resolver_.async_resolve(
+                    std::string(target_.encoded_host()),
+                    port_str,
+                    [this, cb]
+                    (error_code ec, resolve_results eps) {
+                        if (ec.failed())
+                            return fail(ec, "resolve");
+                        auto it = eps.begin();
+                        while (it != eps.end())
+                        {
+                            auto e = it->endpoint();
+                            if (e.address().is_v4())
+                            {
+                                // Send the CONNECT request
+                                socks::io::async_connect_v4(
+                                    socket_,
+                                    e,
+                                    socks_.encoded_user(),
+                                    cb);
+                                return;
+                            }
+                            ++it;
+                        }
+                        fail(asio::error::host_not_found,
+                            "not ipv4 address found for host");
+                    });
             }
             else if (target_.host_type() == urls::host_type::ipv4 ||
                      target_.host_type() == urls::host_type::ipv6)

@@ -24,7 +24,7 @@ public:
     using endpoint = asio::ip::tcp::endpoint;
 
     static
-    std::array<unsigned char, 9>
+    std::array<unsigned char, 10>
     make_v5_reply(reply_code r)
     {
         return {{
@@ -33,6 +33,7 @@ public:
              0x00, // RSV
              static_cast<unsigned char>(address_type::ip_v4), // ATYP
              0x00, // BND. ADDR
+             0x00,
              0x00,
              0x00,
              0x00, // BND. PORT
@@ -87,7 +88,7 @@ public:
                 r.data(),
                 r.size(),
                 io::auth::no_auth{},
-                {});
+                reply_code::succeeded);
         }
 
         // user
@@ -103,7 +104,7 @@ public:
                 r.data(),
                 r.size(),
                 a,
-                {});
+                reply_code::succeeded);
         }
 
         // reply buf too small
@@ -186,7 +187,7 @@ public:
                 r.data(),
                 r.size(),
                 io::auth::no_auth{},
-                {});
+                reply_code::succeeded);
         }
 
         // failure when writing
@@ -227,6 +228,33 @@ public:
     void
     testHostname()
     {
+        // successful hostname
+        {
+            io_context ioc;
+            // Mock proxy response
+            test::stream s(ioc);
+            io::auth::no_auth auth;
+            auto greet_reply = io::detail::prepare_greeting(auth);
+            s.reset_read(greet_reply.data(), greet_reply.size());
+            auto reply = make_v5_reply(reply_code::succeeded);
+            s.append_read(reply.data(), reply.size());
+            // Connect to proxy server
+            error_code ec;
+            endpoint app_ep =
+                io::connect_v5(s, "www.example.com", 80, auth, ec);
+            // Compare to expected write values
+            auto buf1 = io::detail::prepare_greeting(auth);
+            std::pair<string_view, std::uint16_t> ep("www.example.com", 80);
+            auto buf2 = io::detail::prepare_request_v5(ep);
+            BOOST_TEST(s.equal_write_buffers(
+                std::array<asio::const_buffer, 2>{
+                    asio::buffer(buf1), asio::buffer(buf2)}));
+            BOOST_TEST_EQ(app_ep.address().to_v4(),
+                          asio::ip::make_address_v4("0.0.0.0"));
+            BOOST_TEST_EQ(ec, reply_code::succeeded);
+        }
+
+        // read failure
         {
             io_context ioc;
             test::stream s(ioc);
@@ -241,6 +269,7 @@ public:
             BOOST_TEST_EQ(ec, asio::error::no_permission);
         }
 
+        // write failure
         {
             io_context ioc;
             test::stream s(ioc);
@@ -308,7 +337,7 @@ public:
                 r.data(),
                 r.size(),
                 io::auth::no_auth{},
-                {});
+                reply_code::succeeded);
         }
 
         // user
@@ -324,7 +353,7 @@ public:
                 r.data(),
                 r.size(),
                 io::auth::userpass{"user", "pass"},
-                {});
+                reply_code::succeeded);
         }
 
         // reply buf too small
@@ -409,7 +438,7 @@ public:
                 r.data(),
                 r.size(),
                 io::auth::no_auth{},
-                {});
+                reply_code::succeeded);
         }
 
         // failure when writing
@@ -454,6 +483,7 @@ public:
     void
     testAsyncHostname()
     {
+        // fail to read
         {
             io_context ioc;
             test::stream s(ioc);
@@ -471,6 +501,7 @@ public:
             ioc.run();
         }
 
+        // fail to write
         {
             io_context ioc;
             test::stream s(ioc);

@@ -21,7 +21,6 @@ parse_reply_v5(
     std::size_t n,
     error_code& ec)
 {
-    ec = {};
     if (n < 2)
     {
         // Successful messages have size 8
@@ -44,22 +43,21 @@ parse_reply_v5(
     }
 
     // REP: the res
-    auto rep = to_reply_code(buffer[1]);
-    if (rep != reply_code::succeeded)
-    {
-        ec = rep;
+    ec = to_reply_code(buffer[1]);
+    if (ec != reply_code::succeeded)
         return {};
-    }
 
-    // DSTPORT and DSTIP might be ignored
-    // in some servers, which does not represent
-    // an error. Some other servers might
-    // still fill the reply with 0x00s
+    // According to the RFCs, DSTPORT and DSTIP
+    // should be ignored in SOCKS4 and must not
+    // be ignored in SOCKS5.
+    // In practice, DSTPORT and DSTIP are also
+    // ignored by SOCKS5 servers, and the
+    // reply is filled with 0x00s.
+    // When this happends, the original
+    // destination endpoint is considered to
+    // be DSTPORT and DSTIP.
     if (n < 10)
-    {
-        ec = {};
         return {};
-    }
 
     // ATYP
     address_type atyp = to_address_type(buffer[3]);
@@ -71,7 +69,6 @@ parse_reply_v5(
     {
         if (n < 10)
         {
-            ec = {};
             return {};
         }
         std::uint32_t ip{ buffer[4] };
@@ -81,7 +78,6 @@ parse_reply_v5(
         std::uint16_t port{ buffer[8] };
         port <<= 8;
         port |= buffer[9];
-        ec = rep;
         return endpoint{
             asio::ip::make_address_v4(ip),
             port
@@ -91,7 +87,6 @@ parse_reply_v5(
     {
         if (n < 22)
         {
-            ec = {};
             return {};
         }
         asio::ip::address_v6::bytes_type ip;
@@ -100,7 +95,6 @@ parse_reply_v5(
         std::uint16_t port{ buffer[i++] };
         port <<= 8;
         port |= buffer[i++];
-        ec = rep;
         return endpoint{
             asio::ip::make_address_v6(ip),
             port

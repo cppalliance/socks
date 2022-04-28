@@ -36,9 +36,74 @@ namespace http = beast::http;
 namespace asio = boost::asio;
 namespace ip = boost::asio::ip;
 using tcp = boost::asio::ip::tcp;
-using string_view = beast::string_view;
+using string_view = socks::string_view;
+using endpoint = socks::io::endpoint;
+using error_code = socks::error_code;
 
 //------------------------------------------------------------------------------
+
+// A small version of std::to_string to avoid a
+// common bug on MinGw.
+std::string
+to_string(std::uint16_t v)
+{
+#if (defined(__MINGW32__) || defined(MINGW32) || defined(BOOST_MINGW32))
+    constexpr int bn = 4 * sizeof(std::uint16_t);
+    char str[bn];
+    int n = std::snprintf(str, bn, "%d", v);
+    BOOST_ASSERT(n <= bn);
+    boost::ignore_unused(n);
+    return std::string(str);
+#else
+    return std::to_string(v);
+#endif
+}
+
+endpoint
+connect_v4(
+    asio::ip::tcp::socket& stream,
+    string_view target_host,
+    std::uint16_t target_port,
+    string_view socks_user,
+    error_code& ec)
+{
+    // SOCKS4 does not support domain names.
+    // The domain name needs to be resolved
+    // on the client.
+    asio::ip::tcp::resolver resolver{stream.get_executor()};
+    asio::ip::tcp::resolver::results_type endpoints =
+        resolver.resolve(
+            std::string(target_host),
+            to_string(target_port),
+            ec);
+    if (ec.failed())
+        return endpoint{};
+
+    auto it = endpoints.begin();
+    while (it != endpoints.end())
+    {
+        endpoint ep = it->endpoint();
+        ++it;
+        // SOCKS4 does not support IPv6 addresses
+        if (ep.address().is_v6())
+        {
+            if (!ec.failed())
+                ec = asio::error::host_not_found;
+            continue;
+        }
+        ep.port(target_port);
+        ep = socks::io::connect_v4(
+            stream,
+            ep,
+            socks_user,
+            ec);
+        if (ec.failed())
+            continue;
+        else
+            return ep;
+    }
+    return endpoint{};
+}
 
 // Report a failure
 bool
@@ -203,7 +268,7 @@ socks_request(
     {
         if (target.host_type() == urls::host_type::name)
         {
-            socks::io::connect_v4(
+            connect_v4(
                 socket,
                 target.encoded_host(),
                 default_port(target),

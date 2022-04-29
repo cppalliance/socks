@@ -10,8 +10,8 @@
 #include <boost/socks_proto/reply_code.hpp>
 #include <boost/socks_proto/reply_code_v4.hpp>
 
+#include <boost/socks_proto/io/connect.hpp>
 #include <boost/socks_proto/io/connect_v4.hpp>
-#include <boost/socks_proto/io/connect_v5.hpp>
 
 #include <boost/url/url_view.hpp>
 
@@ -221,7 +221,7 @@ socks_request(
         if (!socks.has_userinfo()) {
             if (target.host_type() == urls::host_type::name)
             {
-                socks::io::connect_v5(
+                socks::io::connect(
                     socket,
                     target.encoded_host(),
                     default_port(target),
@@ -231,7 +231,7 @@ socks_request(
             else if (target.host_type() == urls::host_type::ipv4 ||
                      target.host_type() == urls::host_type::ipv6)
             {
-                socks::io::connect_v5(
+                socks::io::connect(
                     socket,
                     get_endpoint_unchecked(target),
                     socks::io::auth::no_auth{},
@@ -246,7 +246,7 @@ socks_request(
             };
             if (target.host_type() == urls::host_type::name)
             {
-                socks::io::connect_v5(
+                socks::io::connect(
                     socket,
                     target.encoded_host(),
                     default_port(target),
@@ -256,7 +256,7 @@ socks_request(
             else if (target.host_type() == urls::host_type::ipv4 ||
                      target.host_type() == urls::host_type::ipv6)
             {
-                socks::io::connect_v5(
+                socks::io::connect(
                     socket,
                     get_endpoint_unchecked(target),
                     a,

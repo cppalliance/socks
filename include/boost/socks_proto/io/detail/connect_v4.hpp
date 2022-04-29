@@ -89,10 +89,10 @@ parse_reply_v4(
     error_code& ec);
 
 template <class Stream, class Allocator>
-class connect_v4_implementation
+class connect_v4_op
 {
 public:
-    connect_v4_implementation(
+    connect_v4_op(
         Stream& s,
         asio::ip::tcp::endpoint target_host,
         string_view socks_user,

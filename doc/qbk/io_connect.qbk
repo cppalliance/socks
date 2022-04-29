@@ -13,7 +13,7 @@
 [section Connect]
 
 A connect request is the most common operation in SOCKS clients.
-This functionality is provided by the __connect_v4__ /
-__async_connect_v4__ and __connect_v5__ / __async_connect_v5__ functions.
+This functionality is provided by the __connect__ / __async_connect__
+and __connect_v4__ / __async_connect_v4__ functions.
 
 [endsect]

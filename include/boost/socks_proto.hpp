@@ -23,7 +23,7 @@
 #include <boost/socks_proto/version.hpp>
 
 #include <boost/socks_proto/io/auth.hpp>
+#include <boost/socks_proto/io/connect.hpp>
 #include <boost/socks_proto/io/connect_v4.hpp>
-#include <boost/socks_proto/io/connect_v5.hpp>
 
 #endif

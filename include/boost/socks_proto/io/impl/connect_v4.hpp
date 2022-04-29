@@ -95,7 +95,7 @@ async_connect_v4(
             void (error_code, endpoint)>
     (
         // implementation of the composed asynchronous operation
-        detail::connect_v4_implementation<
+        detail::connect_v4_op<
             AsyncStream, allocator_type>{
                 s,
                 target_host,

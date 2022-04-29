@@ -5,10 +5,10 @@
 // https://www.boost.org/LICENSE_1_0.txt
 //
 
-#ifndef BOOST_SOCKS_PROTO_IO_DETAIL_IMPL_CONNECT_V5_IPP
-#define BOOST_SOCKS_PROTO_IO_DETAIL_IMPL_CONNECT_V5_IPP
+#ifndef BOOST_SOCKS_PROTO_IO_DETAIL_IMPL_CONNECT_IPP
+#define BOOST_SOCKS_PROTO_IO_DETAIL_IMPL_CONNECT_IPP
 
-#include <boost/socks_proto/io/detail/connect_v5.hpp>
+#include <boost/socks_proto/io/detail/connect.hpp>
 
 namespace boost {
 namespace socks_proto {

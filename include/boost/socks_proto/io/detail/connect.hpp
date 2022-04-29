@@ -7,8 +7,8 @@
 // Official repository: https://github.com/alandefreitas/socks_proto
 //
 
-#ifndef BOOST_SOCKS_PROTO_IO_DETAIL_CONNECT_V5_HPP
-#define BOOST_SOCKS_PROTO_IO_DETAIL_CONNECT_V5_HPP
+#ifndef BOOST_SOCKS_PROTO_IO_DETAIL_CONNECT_HPP
+#define BOOST_SOCKS_PROTO_IO_DETAIL_CONNECT_HPP
 
 #include <boost/socks_proto/detail/config.hpp>
 
@@ -192,7 +192,7 @@ parse_reply_v5(
 
 template <class SyncStream, class EndpointV5, class AuthOptions>
 endpoint
-connect_v5_any(
+connect_any(
     SyncStream& stream,
     EndpointV5&& target_host, // tcp::endpoint or pair<domain, port>
     AuthOptions opt,
@@ -208,6 +208,8 @@ connect_v5_any(
     // accepted by the client
     std::vector<unsigned char> buffer =
         detail::prepare_greeting(opt);
+    BOOST_ASSERT(buffer.size() > 2);
+    unsigned char auth_code = buffer[2];
     asio::write(
         stream,
         asio::buffer(buffer),
@@ -216,15 +218,23 @@ connect_v5_any(
         return endpoint{};
 
     // Read GREETING reply
-    buffer.resize(3);
+    buffer.resize(2);
     std::size_t n = asio::read(
         stream,
         asio::buffer(buffer),
         ec);
-    if (ec.failed())
+    if (ec.failed() && ec != asio::error::eof)
         return endpoint{};
+    if (n < 2 ||
+        buffer[0] != 0x05 ||
+        buffer[1] != auth_code)
+    {
+        ec = asio::error::no_protocol_option;
+        return endpoint{};
+    }
 
     // AFREITAS Implement sync sub-negotiation
+    // This is ignoring the server methods
 
     // Send a CONNECT request
     buffer = detail::prepare_request_v5(target_host);
@@ -250,11 +260,11 @@ connect_v5_any(
 }
 
 template <class Stream, class Endpoint, class AuthOptions, class Allocator>
-class connect_v5_implementation
+class connect_op
     : private empty_value<Allocator, 0>
 {
 public:
-    connect_v5_implementation(
+    connect_op(
         Stream& s,
         Endpoint target_host,
         AuthOptions opt,
@@ -265,6 +275,8 @@ public:
         , target_(target_host)
         , opt_(opt)
     {
+        BOOST_ASSERT(buf_.size() > 2);
+        auth_code_ = buf_[2];
     }
 
     template <typename Self>
@@ -290,8 +302,8 @@ public:
             // Read GREETING reply
             if (ec.failed())
                 goto complete;
-            BOOST_ASSERT(buf_.capacity() >= 3);
-            buf_.resize(3);
+            BOOST_ASSERT(buf_.capacity() >= 2);
+            buf_.resize(2);
             BOOST_ASIO_HANDLER_LOCATION((
                 __FILE__, __LINE__,
                 "asio::async_read"));
@@ -302,10 +314,18 @@ public:
                 std::move(self));
 
             // AFREITAS Implement sub-negotiation
+            // This is ignoring the server method
 
             // Send the CONNECT request
-            if (ec.failed())
+            if (ec.failed() && ec != asio::error::eof)
                 goto complete;
+            if (n < 2 ||
+                buf_[0] != 0x05 ||
+                buf_[1] != auth_code_)
+            {
+                ec = asio::error::no_protocol_option;
+                goto complete;
+            }
             buf_ =
                 prepare_request_v5(target_, this->get());
             BOOST_ASIO_HANDLER_LOCATION((
@@ -357,6 +377,7 @@ public:
 private:
     Stream& s_;
     std::vector<unsigned char, Allocator> buf_;
+    unsigned char auth_code_ = 0x00;
     Endpoint target_;
     AuthOptions opt_;
     asio::coroutine coro_;
@@ -367,7 +388,7 @@ typename asio::async_result<
     typename asio::decay<CompletionToken>::type,
     void (error_code, endpoint)
     >::return_type
-async_connect_v5_any(
+async_connect_any(
     AsyncStream& s,
     Endpoint const& target_host,
     AuthOptions opt,
@@ -387,7 +408,7 @@ async_connect_v5_any(
         void (error_code, endpoint)>
         (
             // implementation of the composed asynchronous operation
-            detail::connect_v5_implementation<
+            detail::connect_op<
                 AsyncStream, Endpoint, AuthOptions, allocator_type>{
                 s,
                 target_host,

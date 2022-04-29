@@ -41,7 +41,7 @@ namespace io {
     @code
     boost::asio::connect(s, resolver.resolve(socks_host, socks_service));
     socks_proto::io::auth::no_auth opt{};
-    socks_proto::io::connect_v5(s, app_host_endpoint, opt, ec);
+    socks_proto::io::connect(s, app_host_endpoint, opt, ec);
     @endcode
 
     @param s SyncStream connected to a SOCKS server.
@@ -57,7 +57,7 @@ namespace io {
 */
 template <class SyncStream, class AuthOptions>
 endpoint
-connect_v5(
+connect(
     SyncStream& s,
     endpoint const& ep,
     AuthOptions opt,
@@ -87,7 +87,7 @@ connect_v5(
     @par Example
     @code
     boost::asio::connect(s, resolver.resolve(socks_host, socks_service));
-    socks_proto::io::connect_v5(s, "www.example.com", 80, "username", ec);
+    socks_proto::io::connect(s, "www.example.com", 80, "username", ec);
     @endcode
 
     @param s SyncStream connected to a SOCKS server.
@@ -102,7 +102,7 @@ connect_v5(
 */
 template <class SyncStream, class AuthOptions>
 endpoint
-connect_v5(
+connect(
     SyncStream& s,
     string_view app_domain,
     std::uint16_t app_port,
@@ -131,7 +131,7 @@ connect_v5(
     @par Example
     @code
     boost::asio::connect(s, resolver.resolve(socks_host, socks_service));
-    socks_io::async_connect_v5(
+    socks_io::async_connect(
         s, app_host_endpoint, "username", ec,
         [](error_code ec, endpoint ep)
     {
@@ -158,7 +158,7 @@ typename asio::async_result<
     typename asio::decay<CompletionToken>::type,
     void (error_code, endpoint)
 >::return_type
-async_connect_v5(
+async_connect(
     AsyncStream& s,
     endpoint const& ep,
     AuthOptions opt,
@@ -191,7 +191,7 @@ async_connect_v5(
     @par Example
     @code
     boost::asio::connect(s, resolver.resolve(socks_host, socks_service));
-    socks_io::async_connect_v5(
+    socks_io::async_connect(
         s, "www.example.com", 80, "username", ec,
         [](error_code ec, endpoint ep)
     {
@@ -219,7 +219,7 @@ typename asio::async_result<
     typename asio::decay<CompletionToken>::type,
     void (error_code, endpoint)
 >::return_type
-async_connect_v5(
+async_connect(
     AsyncStream& s,
     string_view app_domain,
     std::uint16_t app_port,
@@ -230,6 +230,6 @@ async_connect_v5(
 } // socks_proto
 } // boost
 
-#include <boost/socks_proto/io/impl/connect_v5.hpp>
+#include <boost/socks_proto/io/impl/connect.hpp>
 
 #endif

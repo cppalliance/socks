@@ -162,6 +162,8 @@ public:
         error_code& ec)
     {
         ec = rec_;
+        rec_ = rec2_;
+        rec2_ = {};
         std::size_t n = this->read_some(buffers);
         if (!ec.failed() && rpos_ == rsize_)
             ec = asio::error::eof;
@@ -188,6 +190,8 @@ public:
         error_code& ec)
     {
         ec = wec_;
+        wec_ = wec2_;
+        wec2_ = {};
         return this->write_some(buffers);
     }
 
@@ -198,12 +202,15 @@ public:
         const MutableBufferSequence& buffers,
         Handler&& handler)
     {
+        auto ec = rec_;
+        rec_ = rec2_;
+        rec2_ = {};
         std::size_t bytes_transferred = this->read_some(buffers);
         asio::post(
             get_executor(),
             bind_handler(
                 std::move(handler),
-                rec_,
+                ec,
                 bytes_transferred));
     }
 
@@ -214,11 +221,14 @@ public:
         const ConstBufferSequence& buffers,
         Handler&& handler)
     {
+        auto ec = wec_;
+        wec_ = wec2_;
+        wec2_ = {};
         std::size_t bytes_transferred = this->write_some(buffers);
         asio::post(get_executor(),
             asio::detail::bind_handler(
                 std::move(handler),
-                wec_,
+                ec,
                 bytes_transferred));
     }
 
@@ -275,6 +285,18 @@ public:
     reset_write_ec(error_code ec)
     {
         wec_ = ec;
+    }
+
+    void
+    reset_read_ec2(error_code ec2)
+    {
+        rec2_ = ec2;
+    }
+
+    void
+    reset_write_ec2(error_code ec2)
+    {
+        wec2_ = ec2;
     }
 
     void next_read_length(std::size_t length)
@@ -409,6 +431,7 @@ private:
     std::size_t rpos_{0};
     std::size_t rnext_{0};
     error_code rec_{};
+    error_code rec2_{};
 
     // Write
     unsigned char wbuf_[max_cap_];
@@ -416,6 +439,7 @@ private:
     std::size_t wpos_{0};
     std::size_t wnext_{max_cap_};
     error_code wec_{};
+    error_code wec2_{};
 };
 } // test
 } // socks_proto

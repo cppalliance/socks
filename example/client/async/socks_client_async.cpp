@@ -10,8 +10,8 @@
 #include <boost/socks_proto/reply_code.hpp>
 #include <boost/socks_proto/reply_code_v4.hpp>
 
+#include <boost/socks_proto/io/connect.hpp>
 #include <boost/socks_proto/io/connect_v4.hpp>
-#include <boost/socks_proto/io/connect_v5.hpp>
 
 #include <boost/url/url.hpp>
 
@@ -187,7 +187,7 @@ private:
             if (!socks_.has_userinfo()) {
                 if (target_.host_type() == urls::host_type::name)
                 {
-                    socks::io::async_connect_v5(
+                    socks::io::async_connect(
                         socket_,
                         target_.encoded_host(),
                         default_port(target_),
@@ -197,7 +197,7 @@ private:
                 else if (target_.host_type() == urls::host_type::ipv4 ||
                          target_.host_type() == urls::host_type::ipv6)
                 {
-                    socks::io::async_connect_v5(
+                    socks::io::async_connect(
                         socket_,
                         get_endpoint_unchecked(target_),
                         socks::io::auth::no_auth{},
@@ -212,7 +212,7 @@ private:
                 };
                 if (target_.host_type() == urls::host_type::name)
                 {
-                    socks::io::async_connect_v5(
+                    socks::io::async_connect(
                         socket_,
                         target_.encoded_host(),
                         default_port(target_),
@@ -222,7 +222,7 @@ private:
                 else if (target_.host_type() == urls::host_type::ipv4 ||
                          target_.host_type() == urls::host_type::ipv6)
                 {
-                    socks::io::async_connect_v5(
+                    socks::io::async_connect(
                         socket_,
                         get_endpoint_unchecked(target_),
                         a,

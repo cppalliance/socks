@@ -64,8 +64,8 @@
 [def __string_view__            [link socks_proto.ref.boost__socks_proto__string_view `string_view`]]
 [def __connect_v4__             [link socks_proto.ref.boost__socks_proto__io__connect_v4 `connect_v4`]]
 [def __async_connect_v4__             [link socks_proto.ref.boost__socks_proto__io__async_connect_v4 `async_connect_v4`]]
-[def __connect_v5__             [link socks_proto.ref.boost__socks_proto__io__connect_v5 `connect_v5`]]
-[def __async_connect_v5__             [link socks_proto.ref.boost__socks_proto__io__async_connect_v5 `async_connect_v5`]]
+[def __connect__             [link socks_proto.ref.boost__socks_proto__io__connect `connect`]]
+[def __async_connect__             [link socks_proto.ref.boost__socks_proto__io__async_connect `async_connect`]]
 
 [/ Dingbats ]
 

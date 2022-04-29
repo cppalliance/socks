@@ -25,49 +25,13 @@ public:
         auto const check = [&](reply_code_v4 c, int i)
         {
             BOOST_TEST(to_reply_code_v4(i) == c);
-            error_code ec(c);
-            BOOST_TEST_EQ(
-                ec.value(), static_cast<int>(c));
-
-            BOOST_TEST_EQ(
-                ec.message(),
-                to_string(c));
-            char msg[100];
-            ec.message(msg, 100);
-            BOOST_TEST_EQ(
-                std::string(msg), to_string(c));
-
-            auto cond = ec.default_error_condition();
-            BOOST_TEST_EQ(
-                cond.value(), static_cast<int>(c));
-            BOOST_TEST_EQ(
-                cond.message(), ec.message());
         };
-        check(reply_code_v4::request_granted, 0x00);
-        check(reply_code_v4::request_rejected_or_failed, 0x01);
-        check(reply_code_v4::cannot_connect_to_identd_on_the_client, 0x02);
-        check(reply_code_v4::client_and_identd_report_different_user_ids, 0x03);
+        check(reply_code_v4::request_granted, 90);
+        check(reply_code_v4::request_rejected_or_failed, 91);
+        check(reply_code_v4::cannot_connect_to_identd_on_the_client, 92);
+        check(reply_code_v4::client_and_identd_report_different_user_ids, 93);
+        check(reply_code_v4::unassigned, 0xFE);
         check(reply_code_v4::unassigned, 0xFF);
-
-        BOOST_TEST(to_reply_code_v4(0x09) == reply_code_v4::unassigned);
-
-        auto const good =
-            [&](reply_code_v4 v)
-            {
-                BOOST_TEST(to_string(v) != "Unassigned");
-            };
-        good(reply_code_v4::request_granted);
-        good(reply_code_v4::request_rejected_or_failed);
-        good(reply_code_v4::cannot_connect_to_identd_on_the_client);
-        good(reply_code_v4::client_and_identd_report_different_user_ids);
-
-        auto const bad =
-            [&](reply_code_v4 v)
-        {
-            BOOST_TEST(to_string(v) == "Unassigned");
-        };
-        bad(reply_code_v4::unassigned);
-        bad(static_cast<reply_code_v4>(0xFE));
     }
 
     void

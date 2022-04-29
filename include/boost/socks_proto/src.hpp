@@ -28,6 +28,7 @@ in a translation unit of the program.
 #include <boost/socks_proto/impl/address_type.ipp>
 #include <boost/socks_proto/impl/auth_method.ipp>
 #include <boost/socks_proto/impl/command.ipp>
+#include <boost/socks_proto/impl/error.ipp>
 #include <boost/socks_proto/impl/version.ipp>
 #include <boost/socks_proto/impl/reply_code.ipp>
 #include <boost/socks_proto/impl/reply_code_v4.ipp>

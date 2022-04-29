@@ -48,6 +48,8 @@
           <member><link linkend="socks_proto.ref.boost__socks_proto__address_type">address_type</link></member>
           <member><link linkend="socks_proto.ref.boost__socks_proto__auth_method">auth_method</link></member>
           <member><link linkend="socks_proto.ref.boost__socks_proto__command">command</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__error">error</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__condition">condition</link></member>
           <member><link linkend="socks_proto.ref.boost__socks_proto__reply_code">reply_code</link></member>
           <member><link linkend="socks_proto.ref.boost__socks_proto__reply_code_v4">reply_code_v4</link></member>
           <member><link linkend="socks_proto.ref.boost__socks_proto__version">version</link></member>

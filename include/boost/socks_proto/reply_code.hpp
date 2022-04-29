@@ -59,42 +59,7 @@ BOOST_SOCKS_PROTO_DECL
 reply_code
 to_reply_code(unsigned v);
 
-/** Returns reply code as a string view.
-
-    @param v The reply code to use.
-*/
-BOOST_SOCKS_PROTO_DECL
-string_view
-to_string(reply_code v);
-
-/// Outputs the reply code as a string to a stream.
-BOOST_SOCKS_PROTO_DECL
-std::ostream&
-operator<<(std::ostream&, reply_code);
-
-BOOST_SOCKS_PROTO_DECL
-error_code
-make_error_code(
-    reply_code e) noexcept;
-
-BOOST_SOCKS_PROTO_DECL
-error_condition
-make_error_condition(
-    reply_code c) noexcept;
-
 } // socks_proto
 } // boost
-
-namespace boost {
-namespace system {
-
-template <>
-struct is_error_code_enum<socks_proto::reply_code>
-{
-    static const bool value = true;
-};
-
-} // namespace system
-} // namespace boost
 
 #endif

@@ -111,7 +111,7 @@ public:
                 r.data(),
                 r.size(),
                 io::auth::no_auth{},
-                reply_code::succeeded);
+                error::succeeded);
         }
 
         // user
@@ -128,7 +128,7 @@ public:
                 r.data(),
                 r.size(),
                 a,
-                reply_code::succeeded);
+                error::succeeded);
         }
 
         // successful ipv6
@@ -157,7 +157,7 @@ public:
                     asio::buffer(buf1), asio::buffer(buf2)}));
             BOOST_TEST_EQ(app_ep.address().to_v6(),
                           asio::ip::make_address_v6(bytes));
-            BOOST_TEST_EQ(ec, reply_code::succeeded);
+            BOOST_TEST_EQ(ec, error::succeeded);
         }
 
         // reply buf too small
@@ -222,7 +222,7 @@ public:
                 r.data(),
                 r.size(),
                 io::auth::no_auth{},
-                reply_code::general_failure);
+                error::general_failure);
         }
 
         // missing endpoint
@@ -240,7 +240,7 @@ public:
                 r.data(),
                 r.size(),
                 io::auth::no_auth{},
-                reply_code::succeeded);
+                error::succeeded);
         }
 
         // write failure
@@ -344,7 +344,7 @@ public:
             BOOST_TEST(app_ep.address().is_v6());
             BOOST_TEST_EQ(app_ep.address().to_v6(),
                           asio::ip::make_address_v6(ip_bytes));
-            BOOST_TEST_EQ(ec, reply_code::succeeded);
+            BOOST_TEST_EQ(ec, error::succeeded);
         }
 
         // successful hostname
@@ -371,7 +371,7 @@ public:
                     asio::buffer(buf1), asio::buffer(buf2)}));
             BOOST_TEST_EQ(app_ep.address().to_v4(),
                           asio::ip::make_address_v4("0.0.0.0"));
-            BOOST_TEST_EQ(ec, reply_code::succeeded);
+            BOOST_TEST_EQ(ec, error::succeeded);
         }
 
         // read failure
@@ -457,7 +457,7 @@ public:
                 r.data(),
                 r.size(),
                 io::auth::no_auth{},
-                reply_code::succeeded);
+                error::succeeded);
         }
 
         // user
@@ -473,7 +473,7 @@ public:
                 r.data(),
                 r.size(),
                 io::auth::userpass{"user", "pass"},
-                reply_code::succeeded);
+                error::succeeded);
         }
 
         // reply buf too small
@@ -521,7 +521,7 @@ public:
                 r.data(),
                 r.size(),
                 io::auth::no_auth{},
-                reply_code::connection_refused);
+                error::connection_refused);
         }
 
         // missing reply endpoint
@@ -541,7 +541,7 @@ public:
                 r.data(),
                 r.size(),
                 io::auth::no_auth{},
-                reply_code::succeeded);
+                error::succeeded);
         }
 
         // write failure

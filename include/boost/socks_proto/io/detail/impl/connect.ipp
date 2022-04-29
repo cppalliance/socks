@@ -43,8 +43,8 @@ parse_reply_v5(
     }
 
     // REP: the res
-    ec = to_reply_code(buffer[1]);
-    if (ec != reply_code::succeeded)
+    ec = static_cast<error>(buffer[1]);
+    if (ec != condition::succeeded)
         return {};
 
     // According to the RFCs, DSTPORT and DSTIP
@@ -101,7 +101,7 @@ parse_reply_v5(
         };
     }
     default:
-        ec = reply_code::general_failure;
+        ec = error::general_failure;
         return {};
     }
 }

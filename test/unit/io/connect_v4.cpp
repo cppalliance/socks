@@ -118,7 +118,7 @@ public:
                 r.data(),
                 r.size(),
                 "username",
-                reply_code_v4::request_rejected_or_failed);
+                error::request_rejected_or_failed);
         }
 
         // missing endpoint
@@ -249,7 +249,7 @@ public:
                 r.data(),
                 r.size(),
                 "username",
-                reply_code_v4::request_rejected_or_failed);
+                error::request_rejected_or_failed);
         }
 
         // missing endpoint
@@ -257,7 +257,7 @@ public:
             std::array<unsigned char, 2> r = {{
                 0x04,
                 static_cast<unsigned char>(
-                    reply_code_v4::request_granted)
+                    error::request_granted)
             }};
             check(
                 r.data(),

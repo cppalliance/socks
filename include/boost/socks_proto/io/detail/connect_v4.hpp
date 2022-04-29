@@ -157,7 +157,7 @@ public:
                     buf_.size(),
                     rec);
                 if (rec.failed() &&
-                    rec != reply_code_v4::unassigned)
+                    rec != error::unassigned)
                     ec = rec;
             }
         complete:

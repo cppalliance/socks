@@ -29,13 +29,13 @@ namespace socks_proto {
 enum class reply_code_v4 : uint8_t
 {
     /// Request granted
-    request_granted                             = 0x00,
+    request_granted                             = 90,
     /// General SOCKS server failure
-    request_rejected_or_failed                  = 0x01,
+    request_rejected_or_failed                  = 91,
     /// Connection not allowed by ruleset
-    cannot_connect_to_identd_on_the_client      = 0x02,
+    cannot_connect_to_identd_on_the_client      = 92,
     /// Network unreachable
-    client_and_identd_report_different_user_ids = 0x03,
+    client_and_identd_report_different_user_ids = 93,
     /// Unassigned
     unassigned                                  = 0xFF
 };
@@ -49,43 +49,7 @@ BOOST_SOCKS_PROTO_DECL
 reply_code_v4
 to_reply_code_v4(unsigned v);
 
-BOOST_SOCKS_PROTO_DECL
-error_code
-make_error_code(
-    reply_code_v4 e) noexcept;
-
-BOOST_SOCKS_PROTO_DECL
-error_condition
-make_error_condition(
-    reply_code_v4 c) noexcept;
-
-/** Returns SOCKS4 reply code as a string view.
-
-    @param v The reply code to use.
-*/
-BOOST_SOCKS_PROTO_DECL
-string_view
-to_string(reply_code_v4 v);
-
-/// Outputs the SOCKS4 reply code as a string to a stream.
-BOOST_SOCKS_PROTO_DECL
-std::ostream&
-operator<<(std::ostream&, reply_code_v4);
-
 } // socks_proto
 } // boost
-
-namespace boost {
-namespace system {
-
-template <>
-struct is_error_code_enum<socks_proto::reply_code_v4>
-{
-    static const bool value = true;
-};
-
-} // namespace system
-} // namespace boost
-
 
 #endif

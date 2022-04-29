@@ -51,7 +51,7 @@ parse_reply_v4(
     auto rep = to_reply_code_v4(buffer[1]);
     if (rep != reply_code_v4::request_granted)
     {
-        ec = to_reply_code_v4(buffer[1]);
+        ec = static_cast<error>(buffer[1]);
         return {};
     }
 

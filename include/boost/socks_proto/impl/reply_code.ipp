@@ -100,7 +100,8 @@ make_error_code(
         {
             string_view msg = to_string(
                 to_reply_code(ev));
-            msg.copy(buffer, len);
+            std::size_t n = msg.copy(buffer, len - 1);
+            buffer[n] = '\0';
             return buffer;
         }
 

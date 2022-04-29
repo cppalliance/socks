@@ -23,9 +23,26 @@ public:
     testReplyCodeV4()
     {
         auto const check = [&](reply_code_v4 c, int i)
-            {
-                BOOST_TEST(to_reply_code_v4(i) == c);
-            };
+        {
+            BOOST_TEST(to_reply_code_v4(i) == c);
+            error_code ec(c);
+            BOOST_TEST_EQ(
+                ec.value(), static_cast<int>(c));
+
+            BOOST_TEST_EQ(
+                ec.message(),
+                to_string(c));
+            char msg[100];
+            ec.message(msg, 100);
+            BOOST_TEST_EQ(
+                std::string(msg), to_string(c));
+
+            auto cond = ec.default_error_condition();
+            BOOST_TEST_EQ(
+                cond.value(), static_cast<int>(c));
+            BOOST_TEST_EQ(
+                cond.message(), ec.message());
+        };
         check(reply_code_v4::request_granted, 0x00);
         check(reply_code_v4::request_rejected_or_failed, 0x01);
         check(reply_code_v4::cannot_connect_to_identd_on_the_client, 0x02);

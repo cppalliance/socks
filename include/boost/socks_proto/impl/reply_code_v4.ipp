@@ -84,8 +84,9 @@ make_error_code(
             std::size_t len ) const noexcept override
         {
             string_view msg = to_string(
-                to_reply_code(ev));
-            msg.copy(buffer, len);
+                to_reply_code_v4(ev));
+            std::size_t n = msg.copy(buffer, len - 1);
+            buffer[n] = '\0';
             return buffer;
         }
 

@@ -19,13 +19,30 @@ namespace socks_proto {
 class reply_code_test
 {
 public:
+    static
     void
     testReplyCode()
     {
         auto const check = [&](reply_code c, int i)
-            {
-                BOOST_TEST(to_reply_code(i) == c);
-            };
+        {
+            BOOST_TEST(to_reply_code(i) == c);
+            error_code ec(c);
+            BOOST_TEST_EQ(
+                ec.value(), static_cast<int>(c));
+
+            BOOST_TEST_EQ(
+                ec.message(), to_string(c));
+            char msg[100];
+            ec.message(msg, 100);
+            BOOST_TEST_EQ(
+                std::string(msg), to_string(c));
+
+            auto cond = ec.default_error_condition();
+            BOOST_TEST_EQ(
+                cond.value(), static_cast<int>(c));
+            BOOST_TEST_EQ(
+                cond.message(), ec.message());
+        };
         check(reply_code::succeeded, 0x00);
         check(reply_code::general_failure, 0x01);
         check(reply_code::connection_not_allowed_by_ruleset, 0x02);
@@ -40,13 +57,13 @@ public:
         BOOST_TEST(to_reply_code(0x09) == reply_code::unassigned);
 
         auto const good =
-            [&](reply_code v)
-            {
-                BOOST_TEST_NE(to_string(v), "Unassigned");
-                std::stringstream ss;
-                ss << v;
-                BOOST_TEST_EQ(to_string(v), ss.str());
-            };
+        [&](reply_code v)
+        {
+            BOOST_TEST_NE(to_string(v), "Unassigned");
+            std::stringstream ss;
+            ss << v;
+            BOOST_TEST_EQ(to_string(v), ss.str());
+        };
         good(reply_code::succeeded);
         good(reply_code::general_failure);
         good(reply_code::connection_not_allowed_by_ruleset);

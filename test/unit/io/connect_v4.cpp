@@ -10,6 +10,7 @@
 
 // Test that header file is self-contained.
 #include <boost/socks_proto/io/connect_v4.hpp>
+#include <boost/socks_proto/reply_code_v4.hpp>
 #include "test_suite.hpp"
 #include "stream.hpp"
 #include <array>

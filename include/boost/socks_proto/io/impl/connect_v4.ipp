@@ -5,10 +5,10 @@
 // https://www.boost.org/LICENSE_1_0.txt
 //
 
-#ifndef BOOST_SOCKS_PROTO_IO_DETAIL_IMPL_CONNECT_V4_IPP
-#define BOOST_SOCKS_PROTO_IO_DETAIL_IMPL_CONNECT_V4_IPP
+#ifndef BOOST_SOCKS_PROTO_IO_IMPL_CONNECT_V4_IPP
+#define BOOST_SOCKS_PROTO_IO_IMPL_CONNECT_V4_IPP
 
-#include <boost/socks_proto/io/detail/connect_v4.hpp>
+#include <boost/socks_proto/io/connect_v4.hpp>
 #include <boost/core/ignore_unused.hpp>
 
 namespace boost {
@@ -87,4 +87,4 @@ parse_reply_v4(
 } // socks_proto
 } // boost
 
-#endif //BOOST_SOCKS_PROTO_IO_DETAIL_IMPL_CONNECT_V4_IPP
+#endif

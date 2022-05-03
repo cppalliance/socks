@@ -5,13 +5,8 @@
 // https://www.boost.org/LICENSE_1_0.txt
 //
 
-#include <boost/socks_proto/version.hpp>
-#include <boost/socks_proto/command.hpp>
-#include <boost/socks_proto/reply_code.hpp>
-#include <boost/socks_proto/reply_code_v4.hpp>
-
-#include <boost/socks_proto/io/connect.hpp>
-#include <boost/socks_proto/io/connect_v4.hpp>
+#include <boost/socks_proto/connect.hpp>
+#include <boost/socks_proto/connect_v4.hpp>
 
 #include <boost/url/url.hpp>
 
@@ -39,7 +34,7 @@ namespace ip = boost::asio::ip;
 using tcp = boost::asio::ip::tcp;
 using string_view = socks::string_view;
 using error_code = socks::error_code;
-using endpoint = socks::io::endpoint;
+using endpoint = socks::endpoint;
 
 //------------------------------------------------------------------------------
 
@@ -182,37 +177,37 @@ private:
             do_socks_request();
         };
         // Send a SOCKS connect request according to the URL
-        if (socks_version_ == socks::version::socks_5)
+        if (socks_version_ == 0x05)
         {
             if (!socks_.has_userinfo()) {
                 if (target_.host_type() == urls::host_type::name)
                 {
-                    socks::io::async_connect(
+                    socks::async_connect(
                         socket_,
                         target_.encoded_host(),
                         default_port(target_),
-                        socks::io::auth::no_auth{},
+                        socks::auth::no_auth{},
                         cb);
                 }
                 else if (target_.host_type() == urls::host_type::ipv4 ||
                          target_.host_type() == urls::host_type::ipv6)
                 {
-                    socks::io::async_connect(
+                    socks::async_connect(
                         socket_,
                         get_endpoint_unchecked(target_),
-                        socks::io::auth::no_auth{},
+                        socks::auth::no_auth{},
                         cb);
                 }
             }
             else
             {
-                socks::io::auth::userpass a{
+                socks::auth::userpass a{
                     socks_.encoded_user(),
                     socks_.encoded_password(),
                 };
                 if (target_.host_type() == urls::host_type::name)
                 {
-                    socks::io::async_connect(
+                    socks::async_connect(
                         socket_,
                         target_.encoded_host(),
                         default_port(target_),
@@ -222,7 +217,7 @@ private:
                 else if (target_.host_type() == urls::host_type::ipv4 ||
                          target_.host_type() == urls::host_type::ipv6)
                 {
-                    socks::io::async_connect(
+                    socks::async_connect(
                         socket_,
                         get_endpoint_unchecked(target_),
                         a,
@@ -255,7 +250,7 @@ private:
                             if (e.address().is_v4())
                             {
                                 // Send the CONNECT request
-                                socks::io::async_connect_v4(
+                                socks::async_connect_v4(
                                     socket_,
                                     e,
                                     socks_.encoded_user(),
@@ -271,7 +266,7 @@ private:
             else if (target_.host_type() == urls::host_type::ipv4 ||
                      target_.host_type() == urls::host_type::ipv6)
             {
-                socks::io::async_connect_v4(
+                socks::async_connect_v4(
                     socket_,
                     get_endpoint_unchecked(target_),
                     socks_.encoded_user(),
@@ -341,19 +336,18 @@ private:
             return fail(r.error(), "Parse SOCKS");
         socks_ = r.value();
         if (socks_.scheme() == "socks5")
-            socks_version_ = socks::version::socks_5;
+            socks_version_ = 0x05;
         else if (
             socks_.scheme() == "socks4"
             || socks_.scheme() == "socks4a")
-            socks_version_ = socks::version::
-                socks_4;
+            socks_version_ = 0x04;
         else
             return fail(asio::error::no_protocol_option,
                         "Invalid SOCKS scheme: ",
                         socks_.scheme());
 
         // Validate parameters
-        if (socks_version_ == socks::version::socks_4
+        if (socks_version_ == 0x04
             && target_.host_type() == urls::host_type::ipv6)
             return fail(asio::error::no_protocol_option,
                         "SOCKS4 does not support IPv6 addresses");
@@ -384,7 +378,7 @@ private:
     int http_version_;
     urls::url target_;
     urls::url socks_;
-    socks::version socks_version_{socks::version::socks_4};
+    unsigned char socks_version_{0x04};
     beast::flat_buffer buffer_;
     http::request<http::string_body> req_;
     http::response<http::string_body> res_;

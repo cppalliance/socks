@@ -8,8 +8,8 @@
 // Official repository: https://github.com/alandefreitas/socks_proto
 //
 
-#ifndef BOOST_SOCKS_PROTO_REPLY_CODE_HPP
-#define BOOST_SOCKS_PROTO_REPLY_CODE_HPP
+#ifndef BOOST_SOCKS_PROTO_DETAIL_REPLY_CODE_HPP
+#define BOOST_SOCKS_PROTO_DETAIL_REPLY_CODE_HPP
 
 #include <boost/socks_proto/detail/config.hpp>
 #include <boost/socks_proto/error.hpp>
@@ -19,46 +19,53 @@
 
 namespace boost {
 namespace socks_proto {
+namespace detail {
 
-/** Reply code from SOCKS5 server to client
-
-   @par Specification
-   @li https://datatracker.ietf.org/doc/html/rfc1928#section-6
-
- */
+// Reply code from SOCKS5 server to client
+//
+// https://datatracker.ietf.org/doc/html/rfc1928#section-6
 enum class reply_code : uint8_t
 {
-    /// Succeeded
+    // Succeeded
     succeeded                           = 0x00,
-    /// General SOCKS server failure
+
+    // General SOCKS server failure
     general_failure                     = 0x01,
-    /// Connection not allowed by ruleset
+
+    // Connection not allowed by ruleset
     connection_not_allowed_by_ruleset   = 0x02,
-    /// Network unreachable
+
+    // Network unreachable
     network_unreachable                 = 0x03,
-    /// Host unreachable
+
+    // Host unreachable
     host_unreachable                    = 0x04,
-    /// Connection refused
+
+    // Connection refused
     connection_refused                  = 0x05,
-    /// TTL expired
+
+    // TTL expired
     ttl_expired                         = 0x06,
-    /// Command not supported
+
+    // Command not supported
     command_not_supported               = 0x07,
-    /// Address type not supported
+
+    // Address type not supported
     address_type_not_supported          = 0x08,
-    /// Unassigned
+
+    // Unassigned
     unassigned                          = 0xFF,
 };
 
-/** Converts an integer to a known reply code.
-
-    If the integer does not match a known reply code,
-    @ref status::unassigned is returned.
-*/
+// Converts an integer to a known reply code.
+//
+//  If the integer does not match a known reply code,
+//  reply_code::unassigned is returned.
 BOOST_SOCKS_PROTO_DECL
 reply_code
 to_reply_code(unsigned v);
 
+} // detail
 } // socks_proto
 } // boost
 

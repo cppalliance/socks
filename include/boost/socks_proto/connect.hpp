@@ -7,12 +7,12 @@
 // Official repository: https://github.com/alandefreitas/socks_proto
 //
 
-#ifndef BOOST_SOCKS_PROTO_IO_CONNECT_V5_HPP
-#define BOOST_SOCKS_PROTO_IO_CONNECT_V5_HPP
+#ifndef BOOST_SOCKS_PROTO_CONNECT_V5_HPP
+#define BOOST_SOCKS_PROTO_CONNECT_V5_HPP
 
 #include <boost/socks_proto/detail/config.hpp>
-#include <boost/socks_proto/io/endpoint.hpp>
-#include <boost/socks_proto/io/auth.hpp>
+#include <boost/socks_proto/endpoint.hpp>
+#include <boost/socks_proto/auth.hpp>
 #include <boost/socks_proto/string_view.hpp>
 #include <boost/socks_proto/error.hpp>
 #include <boost/asio/async_result.hpp>
@@ -20,7 +20,6 @@
 
 namespace boost {
 namespace socks_proto {
-namespace io {
 
 /** Connect to the application server through a SOCKS5 server
 
@@ -226,10 +225,9 @@ async_connect(
     AuthOptions opt,
     CompletionToken&& token);
 
-} // io
 } // socks_proto
 } // boost
 
-#include <boost/socks_proto/io/impl/connect.hpp>
+#include <boost/socks_proto/impl/connect.hpp>
 
 #endif

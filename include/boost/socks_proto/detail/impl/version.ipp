@@ -8,14 +8,15 @@
 // Official repository: https://github.com/CPPAlliance/http_proto
 //
 
-#ifndef BOOST_SOCKS_PROTO_IMPL_VERSION_IPP
-#define BOOST_SOCKS_PROTO_IMPL_VERSION_IPP
+#ifndef BOOST_SOCKS_PROTO_DETAIL_IMPL_VERSION_IPP
+#define BOOST_SOCKS_PROTO_DETAIL_IMPL_VERSION_IPP
 
-#include <boost/socks_proto/version.hpp>
+#include <boost/socks_proto/detail/version.hpp>
 #include <ostream>
 
 namespace boost {
 namespace socks_proto {
+namespace detail {
 
 string_view
 to_string(version v) noexcept
@@ -39,6 +40,7 @@ operator<<(
     return os;
 }
 
+} // detail
 } // http_proto
 } // boost
 

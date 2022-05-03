@@ -5,13 +5,8 @@
 // https://www.boost.org/LICENSE_1_0.txt
 //
 
-#include <boost/socks_proto/version.hpp>
-#include <boost/socks_proto/command.hpp>
-#include <boost/socks_proto/reply_code.hpp>
-#include <boost/socks_proto/reply_code_v4.hpp>
-
-#include <boost/socks_proto/io/connect.hpp>
-#include <boost/socks_proto/io/connect_v4.hpp>
+#include <boost/socks_proto/connect.hpp>
+#include <boost/socks_proto/connect_v4.hpp>
 
 #include <boost/url/url_view.hpp>
 
@@ -37,7 +32,7 @@ namespace asio = boost::asio;
 namespace ip = boost::asio::ip;
 using tcp = boost::asio::ip::tcp;
 using string_view = socks::string_view;
-using endpoint = socks::io::endpoint;
+using endpoint = socks::endpoint;
 using error_code = socks::error_code;
 
 //------------------------------------------------------------------------------
@@ -92,7 +87,7 @@ connect_v4(
             continue;
         }
         ep.port(target_port);
-        ep = socks::io::connect_v4(
+        ep = socks::connect_v4(
             stream,
             ep,
             socks_user,
@@ -178,17 +173,17 @@ socks_request(
     if (!r.has_value())
         return fail(r.error(), "Parse SOCKS");
     urls::url_view socks = r.value();
-    socks::version socks_version;
+    unsigned char socks_version = 0x00;
     if (socks.scheme() == "socks5")
-        socks_version = socks::version::socks_5;
+        socks_version = 0x05;
     else if (socks.scheme() == "socks4" ||
              socks.scheme() == "socks4a")
-        socks_version = socks::version::socks_4;
+        socks_version = 0x04;
     else
         return fail("Invalid SOCKS scheme: ", socks.scheme());
 
     // Validate parameters
-    if (socks_version == socks::version::socks_4 &&
+    if (socks_version == 0x04 &&
         target.host_type() == urls::host_type::ipv6)
         return fail("SOCKS4 does not support IPv6 addresses");
 
@@ -216,37 +211,37 @@ socks_request(
         return fail(ec, "connect");
 
     // Send a SOCKS connect request according to the URL
-    if (socks_version == socks::version::socks_5)
+    if (socks_version == 0x05)
     {
         if (!socks.has_userinfo()) {
             if (target.host_type() == urls::host_type::name)
             {
-                socks::io::connect(
+                socks::connect(
                     socket,
                     target.encoded_host(),
                     default_port(target),
-                    socks::io::auth::no_auth{},
+                    socks::auth::no_auth{},
                     ec);
             }
             else if (target.host_type() == urls::host_type::ipv4 ||
                      target.host_type() == urls::host_type::ipv6)
             {
-                socks::io::connect(
+                socks::connect(
                     socket,
                     get_endpoint_unchecked(target),
-                    socks::io::auth::no_auth{},
+                    socks::auth::no_auth{},
                     ec);
             }
         }
         else
         {
-            socks::io::auth::userpass a{
+            socks::auth::userpass a{
                 socks.encoded_user(),
                 socks.encoded_password(),
             };
             if (target.host_type() == urls::host_type::name)
             {
-                socks::io::connect(
+                socks::connect(
                     socket,
                     target.encoded_host(),
                     default_port(target),
@@ -256,7 +251,7 @@ socks_request(
             else if (target.host_type() == urls::host_type::ipv4 ||
                      target.host_type() == urls::host_type::ipv6)
             {
-                socks::io::connect(
+                socks::connect(
                     socket,
                     get_endpoint_unchecked(target),
                     a,
@@ -278,7 +273,7 @@ socks_request(
         else if (target.host_type() == urls::host_type::ipv4 ||
                  target.host_type() == urls::host_type::ipv6)
         {
-            socks::io::connect_v4(
+            socks::connect_v4(
                 socket,
                 get_endpoint_unchecked(target),
                 socks.encoded_user(),

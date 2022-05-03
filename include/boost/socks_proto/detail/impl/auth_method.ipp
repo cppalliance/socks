@@ -7,14 +7,15 @@
 // Official repository: https://github.com/CPPAlliance/http_proto
 //
 
-#ifndef BOOST_SOCKS_PROTO_IMPL_AUTH_METHOD_IPP
-#define BOOST_SOCKS_PROTO_IMPL_AUTH_METHOD_IPP
+#ifndef BOOST_SOCKS_PROTO_DETAIL_IMPL_AUTH_METHOD_IPP
+#define BOOST_SOCKS_PROTO_DETAIL_IMPL_AUTH_METHOD_IPP
 
-#include <boost/socks_proto/auth_method.hpp>
+#include <boost/socks_proto/detail/auth_method.hpp>
 #include <ostream>
 
 namespace boost {
 namespace socks_proto {
+namespace detail {
 
 string_view
 to_string(auth_method v) noexcept
@@ -57,6 +58,7 @@ operator<<(
     return os;
 }
 
+} // detail
 } // http_proto
 } // boost
 

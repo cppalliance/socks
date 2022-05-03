@@ -14,6 +14,7 @@
 #include <boost/socks_proto/detail/config.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/system/system_error.hpp>
+#include <boost/system/result.hpp>
 
 namespace boost {
 namespace socks_proto {
@@ -29,6 +30,11 @@ using error_category = system::error_category;
 
 /// The type of error condition used by the library
 using error_condition = system::error_condition;
+
+/// The type of result returned by library functions
+template<class T>
+using result = boost::system::result<T, error_code>;
+
 
 /** Error codes returned by SOCKS operations
 */
@@ -74,14 +80,36 @@ enum class error
     /// Request granted
     request_granted                             = 90,
 
-    /// General SOCKS server failure
+    /// Request rejected or failed
     request_rejected_or_failed                  = 91,
 
-    /// Connection not allowed by ruleset
+    /// Request rejected because SOCKS server cannot connect to identd on the client
     cannot_connect_to_identd_on_the_client      = 92,
 
-    /// Network unreachable
+    /// Request rejected because the client program and identd report different user-ids
     client_and_identd_report_different_user_ids = 93,
+
+    //----------------------------------
+
+    //
+    // Parsing errors
+    //
+
+    /// Bad request size
+    bad_request_size              = 0xA0,
+
+    /// Bad request version
+    bad_request_version,
+
+    /// Bad request command
+    bad_request_command,
+
+    /// Bad reserved component
+    bad_reserved_component,
+
+    /// Bad address type
+    bad_address_type,
+
 
     //----------------------------------
 

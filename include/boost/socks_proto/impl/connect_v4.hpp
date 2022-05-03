@@ -7,15 +7,16 @@
 // Official repository: https://github.com/alandefreitas/socks_proto
 //
 
-#ifndef BOOST_SOCKS_PROTO_IO_IMPL_CONNECT_V4_HPP
-#define BOOST_SOCKS_PROTO_IO_IMPL_CONNECT_V4_HPP
+#ifndef BOOST_SOCKS_PROTO_IMPL_CONNECT_V4_HPP
+#define BOOST_SOCKS_PROTO_IMPL_CONNECT_V4_HPP
 
 #include <boost/socks_proto/detail/config.hpp>
 
-#include <boost/socks_proto/command.hpp>
+#include <boost/socks_proto/detail/command.hpp>
+#include <boost/socks_proto/detail/version.hpp>
 #include <boost/socks_proto/error.hpp>
-#include <boost/socks_proto/version.hpp>
-#include <boost/socks_proto/io/endpoint.hpp>
+#include <boost/socks_proto/detail/version.hpp>
+#include <boost/socks_proto/endpoint.hpp>
 
 #include <boost/asio/error.hpp>
 #include <boost/asio/compose.hpp>
@@ -29,7 +30,6 @@
 
 namespace boost {
 namespace socks_proto {
-namespace io {
 namespace detail {
 
 // All these operations are repeatedly
@@ -264,7 +264,6 @@ async_connect_v4(
     );
 }
 
-} // io
 } // socks_proto
 } // boost
 

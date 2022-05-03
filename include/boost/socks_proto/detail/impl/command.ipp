@@ -7,14 +7,30 @@
 // Official repository: https://github.com/CPPAlliance/http_proto
 //
 
-#ifndef BOOST_SOCKS_PROTO_IMPL_COMMAND_IPP
-#define BOOST_SOCKS_PROTO_IMPL_COMMAND_IPP
+#ifndef BOOST_SOCKS_PROTO_DETAIL_IMPL_COMMAND_IPP
+#define BOOST_SOCKS_PROTO_DETAIL_IMPL_COMMAND_IPP
 
-#include <boost/socks_proto/command.hpp>
+#include <boost/socks_proto/detail/command.hpp>
 #include <ostream>
 
 namespace boost {
 namespace socks_proto {
+namespace detail {
+
+command
+to_command(unsigned v)
+{
+    switch(static_cast<command>(v))
+    {
+    case command::connect:
+    case command::bind:
+    case command::udp_associate:
+        return static_cast<command>(v);
+    default:
+        break;
+    }
+    return command::unsupported;
+}
 
 string_view
 to_string(command v) noexcept
@@ -41,6 +57,7 @@ operator<<(
     return os;
 }
 
+} // detail
 } // http_proto
 } // boost
 

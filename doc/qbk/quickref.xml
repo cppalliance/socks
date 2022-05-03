@@ -23,96 +23,44 @@
       <entry valign="top">
         <bridgehead renderas="sect3">Classes</bridgehead>
         <simplelist type="vert" columns="1">
-          <member><link linkend="socks_proto.ref.boost__socks_proto__reply">reply</link></member>
-          <member><link linkend="socks_proto.ref.boost__socks_proto__request">request</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__auth__no_auth">auth::no_auth</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__auth__userpass">auth::userpass</link></member>
         </simplelist>
-        <bridgehead renderas="sect3">Type Traits</bridgehead>
-        <simplelist type="vert" columns="1">
-        </simplelist>
+        <!-- <bridgehead renderas="sect3">Type Traits</bridgehead> -->
+        <!-- <simplelist type="vert" columns="1"> -->
+        <!-- </simplelist> -->
       </entry>
      
       <entry valign="top">
         <bridgehead renderas="sect3">Functions</bridgehead>
         <simplelist type="vert" columns="1">
-          <member><link linkend="socks_proto.ref.boost__socks_proto__make_error_code">make_error_code</link></member>
-          <member><link linkend="socks_proto.ref.boost__socks_proto__make_error_condition">make_error_condition</link></member>
-          <member><link linkend="socks_proto.ref.boost__socks_proto__to_reply_code">to_reply_code</link></member>
-          <member><link linkend="socks_proto.ref.boost__socks_proto__to_reply_code_v4">to_reply_code_v4</link></member>
-          <member><link linkend="socks_proto.ref.boost__socks_proto__to_string">to_string</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__async_connect_v4">async_connect_v4</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__async_connect">async_connect</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__connect_v4">connect_v4</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__connect">connect</link></member>
         </simplelist>
       </entry>
 
       <entry valign="top">
         <bridgehead renderas="sect3">Constants</bridgehead>
         <simplelist type="vert" columns="1">
-          <member><link linkend="socks_proto.ref.boost__socks_proto__address_type">address_type</link></member>
-          <member><link linkend="socks_proto.ref.boost__socks_proto__auth_method">auth_method</link></member>
-          <member><link linkend="socks_proto.ref.boost__socks_proto__command">command</link></member>
           <member><link linkend="socks_proto.ref.boost__socks_proto__error">error</link></member>
           <member><link linkend="socks_proto.ref.boost__socks_proto__condition">condition</link></member>
-          <member><link linkend="socks_proto.ref.boost__socks_proto__reply_code">reply_code</link></member>
-          <member><link linkend="socks_proto.ref.boost__socks_proto__reply_code_v4">reply_code_v4</link></member>
-          <member><link linkend="socks_proto.ref.boost__socks_proto__version">version</link></member>
         </simplelist>
       </entry>
 
       <entry valign="top">
-        <bridgehead renderas="sect3">Operators</bridgehead>
-        <simplelist type="vert" columns="1">
-          <member><link linkend="socks_proto.ref.boost__socks_proto__operator_lt__lt_">operator&lt;&lt;</link></member>
-        </simplelist>
+        <!-- <bridgehead renderas="sect3">Operators</bridgehead> -->
+        <!-- <simplelist type="vert" columns="1"> -->
+        <!-- </simplelist> -->
         <bridgehead renderas="sect3">Aliases</bridgehead>
         <simplelist type="vert" columns="1">
           <member><link linkend="socks_proto.ref.boost__socks_proto__error_category">error_category</link></member>
           <member><link linkend="socks_proto.ref.boost__socks_proto__error_code">error_code</link></member>
           <member><link linkend="socks_proto.ref.boost__socks_proto__error_condition">error_condition</link></member>
+          <member><link linkend="socks_proto.ref.boost__socks_proto__endpoint">endpoint</link></member>
           <member><link linkend="socks_proto.ref.boost__socks_proto__string_view">string_view</link></member>
           <member><link linkend="socks_proto.ref.boost__socks_proto__system_error">system_error</link></member>
-        </simplelist>
-      </entry>
-
-    </row></tbody>
-  </tgroup>
-  <tgroup cols="4">
-    <colspec colname="a"/><colspec colname="b"/><colspec colname="c"/><colspec colname="d"/>
-    <thead><row>
-      <entry valign="center" namest="a" nameend="d">
-        <bridgehead renderas="sect2">IO</bridgehead>
-      </entry>
-    </row></thead>
-    <tbody><row>
-      <entry valign="top">
-        <bridgehead renderas="sect3">Classes</bridgehead>
-        <simplelist type="vert" columns="1">
-        </simplelist>
-        <bridgehead renderas="sect3">Type Traits</bridgehead>
-        <simplelist type="vert" columns="1">
-        </simplelist>
-      </entry>
-
-      <entry valign="top">
-        <bridgehead renderas="sect3">Functions</bridgehead>
-        <simplelist type="vert" columns="1">
-          <member><link linkend="socks_proto.ref.boost__socks_proto__io__async_connect_v4">async_connect_v4</link></member>
-          <member><link linkend="socks_proto.ref.boost__socks_proto__io__async_connect">async_connect</link></member>
-          <member><link linkend="socks_proto.ref.boost__socks_proto__io__connect_v4">connect_v4</link></member>
-          <member><link linkend="socks_proto.ref.boost__socks_proto__io__connect">connect</link></member>
-        </simplelist>
-      </entry>
-
-      <entry valign="top">
-        <bridgehead renderas="sect3">Constants</bridgehead>
-        <simplelist type="vert" columns="1">
-        </simplelist>
-      </entry>
-
-      <entry valign="top">
-        <bridgehead renderas="sect3">Operators</bridgehead>
-        <simplelist type="vert" columns="1">
-        </simplelist>
-        <bridgehead renderas="sect3">Aliases</bridgehead>
-        <simplelist type="vert" columns="1">
-          <member><link linkend="socks_proto.ref.boost__socks_proto__io__endpoint">endpoint</link></member>
         </simplelist>
       </entry>
     </row></tbody>

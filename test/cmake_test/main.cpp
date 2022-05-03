@@ -7,5 +7,6 @@
 
 int main()
 {
-    return static_cast<int>(boost::socks_proto::reply_code::succeeded);
+    return static_cast<int>(
+        boost::socks_proto::error::succeeded);
 }

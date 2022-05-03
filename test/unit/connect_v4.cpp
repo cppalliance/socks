@@ -9,8 +9,8 @@
 //
 
 // Test that header file is self-contained.
-#include <boost/socks_proto/io/connect_v4.hpp>
-#include <boost/socks_proto/reply_code_v4.hpp>
+#include <boost/socks_proto/connect_v4.hpp>
+#include <boost/socks_proto/detail/reply_code_v4.hpp>
 #include "test_suite.hpp"
 #include "stream.hpp"
 #include <array>
@@ -23,10 +23,11 @@ class io_connect_v4_test
 public:
     using io_context = asio::io_context;
     using endpoint = asio::ip::tcp::endpoint;
+    using reply_code_v4 = detail::reply_code_v4;
 
     static
     std::array<unsigned char, 8>
-    make_v4_reply(reply_code_v4 r)
+    make_v4_reply(detail::reply_code_v4 r)
     {
         return {{
             0x04, // VER
@@ -55,8 +56,8 @@ public:
             s.reset_read(reply, reply_n);
             endpoint ep(asio::ip::make_address_v4(127), 0);
             error_code ec;
-            endpoint app_ep = io::connect_v4(s, ep, user, ec);
-            auto buf = io::detail::prepare_request_v4(ep, user);
+            endpoint app_ep = connect_v4(s, ep, user, ec);
+            auto buf = detail::prepare_request_v4(ep, user);
             BOOST_TEST(s.equal_write_buffers(asio::buffer(buf)));
             BOOST_TEST_EQ(app_ep.address().to_v4(),
                           asio::ip::make_address_v4("0.0.0.0"));
@@ -144,8 +145,8 @@ public:
             s.reset_write_ec(asio::error::no_permission);
             endpoint ep(asio::ip::make_address_v4(127), 0);
             error_code ec;
-            endpoint app_ep = io::connect_v4(s, ep, "", ec);
-            auto buf = io::detail::prepare_request_v4(ep, "");
+            endpoint app_ep = connect_v4(s, ep, "", ec);
+            auto buf = detail::prepare_request_v4(ep, "");
             BOOST_TEST(s.equal_write_buffers(asio::buffer(buf)));
             BOOST_TEST_EQ(app_ep.address().to_v4(),
                           asio::ip::make_address_v4("0.0.0.0"));
@@ -160,8 +161,8 @@ public:
             s.reset_read_ec(asio::error::no_permission);
             endpoint ep(asio::ip::make_address_v4(127), 0);
             error_code ec;
-            endpoint app_ep = io::connect_v4(s, ep, "", ec);
-            auto buf = io::detail::prepare_request_v4(ep, "");
+            endpoint app_ep = connect_v4(s, ep, "", ec);
+            auto buf = detail::prepare_request_v4(ep, "");
             BOOST_TEST(s.equal_write_buffers(asio::buffer(buf)));
             BOOST_TEST_EQ(app_ep.address().to_v4(),
                           asio::ip::make_address_v4("0.0.0.0"));
@@ -182,10 +183,10 @@ public:
             test::stream s(ioc);
             s.reset_read(reply, reply_n);
             endpoint ep(asio::ip::make_address_v4(127), 0);
-            io::async_connect_v4(s, ep, user, [&](
+            async_connect_v4(s, ep, user, [&](
                 error_code ec, endpoint app_ep)
             {
-                auto buf = io::detail::prepare_request_v4(ep, user);
+                auto buf = detail::prepare_request_v4(ep, user);
                 BOOST_TEST(s.equal_write_buffers(asio::buffer(buf)));
                 BOOST_TEST_EQ(app_ep.address().to_v4(),
                               asio::ip::make_address_v4("0.0.0.0"));
@@ -274,10 +275,10 @@ public:
             s.reset_read(nullptr, 0);
             s.reset_write_ec(asio::error::no_permission);
             endpoint ep(asio::ip::make_address_v4(127), 0);
-            io::async_connect_v4(s, ep, "",
+            async_connect_v4(s, ep, "",
                 [&](error_code ec, endpoint app_ep)
             {
-                auto buf = io::detail::prepare_request_v4(ep, "");
+                auto buf = detail::prepare_request_v4(ep, "");
                 BOOST_TEST(s.equal_write_buffers(asio::buffer(buf)));
                 BOOST_TEST_EQ(app_ep.address().to_v4(),
                               asio::ip::make_address_v4("0.0.0.0"));
@@ -293,10 +294,10 @@ public:
             s.reset_read(nullptr, 0);
             s.reset_read_ec(asio::error::no_permission);
             endpoint ep(asio::ip::make_address_v4(127), 0);
-            io::async_connect_v4(s, ep, "",
+            async_connect_v4(s, ep, "",
                 [&](error_code ec, endpoint app_ep)
             {
-                auto buf = io::detail::prepare_request_v4(ep, "");
+                auto buf = detail::prepare_request_v4(ep, "");
                 BOOST_TEST(s.equal_write_buffers(asio::buffer(buf)));
                 BOOST_TEST_EQ(app_ep.address().to_v4(),
                               asio::ip::make_address_v4("0.0.0.0"));

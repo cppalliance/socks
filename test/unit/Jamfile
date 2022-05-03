@@ -19,23 +19,16 @@ project
     ;
 
 local SOURCES =
-    io/connect_v4.cpp
-    io/connect.cpp
-    address_type.cpp
-    auth_method.cpp
-    command.cpp
+    auth.cpp
+    connect.cpp
+    connect_v4.cpp
+    endpoint.cpp
     error.cpp
     socks_proto.cpp
-    reply_code.cpp
-    reply_code_v4.cpp
-    reply_view.cpp
-    request_view.cpp
     string_view.cpp
-    test_helpers.cpp
-    version.cpp
     ;
 
 for local f in $(SOURCES)
 {
-    run $(f) ./test_helpers.cpp /boost/socks_proto//boost_socks_proto ;
+    run $(f) /boost/socks_proto//boost_socks_proto ;
 }

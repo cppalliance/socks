@@ -5,15 +5,15 @@
 // https://www.boost.org/LICENSE_1_0.txt
 //
 
-#ifndef BOOST_SOCKS_PROTO_IO_IMPL_CONNECT_V4_IPP
-#define BOOST_SOCKS_PROTO_IO_IMPL_CONNECT_V4_IPP
+#ifndef BOOST_SOCKS_PROTO_IMPL_CONNECT_V4_IPP
+#define BOOST_SOCKS_PROTO_IMPL_CONNECT_V4_IPP
 
-#include <boost/socks_proto/io/connect_v4.hpp>
+#include <boost/socks_proto/connect_v4.hpp>
+#include <boost/socks_proto/detail/reply_code_v4.hpp>
 #include <boost/core/ignore_unused.hpp>
 
 namespace boost {
 namespace socks_proto {
-namespace io {
 namespace detail {
 
 asio::ip::tcp::endpoint
@@ -83,7 +83,6 @@ parse_reply_v4(
 }
 
 } // detail
-} // io
 } // socks_proto
 } // boost
 

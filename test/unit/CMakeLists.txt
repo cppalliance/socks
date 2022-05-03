@@ -11,27 +11,16 @@
 set(EXTRAFILES
     ../../extra/test_main.cpp
     ../../extra/include/test_suite.hpp
-    ./test_helpers.hpp
     )
 
 set(PFILES
-    CMakeLists.txt
-    io/connect_v4.cpp
-    io/connect.cpp
-    address_type.cpp
-    auth_method.cpp
-    command.cpp
+    auth.cpp
+    connect.cpp
+    connect_v4.cpp
+    endpoint.cpp
     error.cpp
-    Jamfile
     socks_proto.cpp
-    reply_code.cpp
-    reply_code_v4.cpp
-    reply_view.cpp
-    request_view.cpp
     string_view.cpp
-    test_helpers.cpp
-    test_helpers.hpp
-    version.cpp
     )
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "" FILES ${PFILES})

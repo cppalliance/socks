@@ -8,14 +8,15 @@
 // Official repository: https://github.com/CPPAlliance/http_proto
 //
 
-#ifndef BOOST_HTTP_PROTO_IMPL_REPLY_CODE_V4_IPP
-#define BOOST_HTTP_PROTO_IMPL_REPLY_CODE_V4_IPP
+#ifndef BOOST_HTTP_PROTO_DETAIL_IMPL_REPLY_CODE_V4_IPP
+#define BOOST_HTTP_PROTO_DETAIL_IMPL_REPLY_CODE_V4_IPP
 
-#include <boost/socks_proto/reply_code_v4.hpp>
+#include <boost/socks_proto/detail/reply_code_v4.hpp>
 #include <boost/throw_exception.hpp>
 
 namespace boost {
 namespace socks_proto {
+namespace detail {
 
 reply_code_v4
 to_reply_code_v4(unsigned v)
@@ -33,6 +34,7 @@ to_reply_code_v4(unsigned v)
     return reply_code_v4::unassigned;
 }
 
+} // detail
 } // http_proto
 } // boost
 

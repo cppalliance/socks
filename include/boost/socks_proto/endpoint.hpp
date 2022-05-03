@@ -8,25 +8,24 @@
 // Official repository: https://github.com/alandefreitas/socks_proto
 //
 
-// Test that header file is self-contained.
-#include <boost/socks_proto/reply_view.hpp>
-#include "test_suite.hpp"
+#ifndef BOOST_SOCKS_PROTO_ENDPOINT_HPP
+#define BOOST_SOCKS_PROTO_ENDPOINT_HPP
+
+#include <boost/socks_proto/detail/config.hpp>
+#include <boost/asio/ip/tcp.hpp>
 
 namespace boost {
 namespace socks_proto {
 
-class reply_view_test
-{
-public:
-    void
-    run()
-    {
-    }
-};
+/** Type used to represent endpoints
 
-TEST_SUITE(
-    reply_view_test,
-    "boost.socks_proto.reply_view");
+    Unlike Asio functions, which might use
+    other `Endpoint` types, SOCKS can
+    only connect to an `asio::ip::tcp::endpoint`
+ */
+using endpoint = asio::ip::tcp::endpoint;
 
 } // socks_proto
 } // boost
+
+#endif

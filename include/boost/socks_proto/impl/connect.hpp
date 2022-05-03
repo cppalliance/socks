@@ -7,26 +7,49 @@
 // Official repository: https://github.com/alandefreitas/socks_proto
 //
 
-#ifndef BOOST_SOCKS_PROTO_IO_IMPL_CONNECT_HPP
-#define BOOST_SOCKS_PROTO_IO_IMPL_CONNECT_HPP
+#ifndef BOOST_SOCKS_PROTO_IMPL_CONNECT_HPP
+#define BOOST_SOCKS_PROTO_IMPL_CONNECT_HPP
 
 #include <boost/socks_proto/detail/config.hpp>
 
-#include <boost/socks_proto/auth_method.hpp>
-#include <boost/socks_proto/address_type.hpp>
+#include <boost/socks_proto/detail/auth_method.hpp>
+#include <boost/socks_proto/detail/address_type.hpp>
+#include <boost/socks_proto/detail/command.hpp>
+#include <boost/socks_proto/detail/version.hpp>
 
-#include <boost/asio/error.hpp>
 #include <boost/asio/compose.hpp>
+#include <boost/asio/coroutine.hpp>
+#include <boost/asio/error.hpp>
+#include <boost/asio/read.hpp>
+#include <boost/asio/write.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
+#include <boost/core/empty_value.hpp>
 #include <boost/core/allocator_access.hpp>
-
-#include <utility>
 
 namespace boost {
 namespace socks_proto {
-namespace io {
 namespace detail {
+
+struct domain_endpoint_view
+{
+    string_view domain;
+    std::uint16_t port{0};
+};
+
+struct domain_endpoint
+{
+    std::string domain;
+    std::uint16_t port{0};
+
+    operator domain_endpoint_view() const
+    {
+        domain_endpoint_view ep;
+        ep.domain = domain;
+        ep.port = port;
+        return ep;
+    }
+};
 
 // All these operations are repeatedly
 // implementing a pattern that should be
@@ -64,13 +87,13 @@ prepare_greeting(std::initializer_list<auth_method> il)
 
 template <class Allocator = std::allocator<unsigned char>>
 std::vector<unsigned char, Allocator>
-prepare_greeting(io::auth::no_auth const &) {
+prepare_greeting(auth::no_auth const &) {
     return prepare_greeting({auth_method::no_authentication});
 }
 
 template <class Allocator = std::allocator<unsigned char>>
 std::vector<unsigned char, Allocator>
-prepare_greeting(io::auth::userpass const&) {
+prepare_greeting(auth::userpass const&) {
     return prepare_greeting({auth_method::userpass});
 }
 
@@ -84,8 +107,8 @@ dst_addr_size(
 constexpr
 std::size_t
 dst_addr_size(
-    std::pair<string_view, std::uint16_t> const& target_host) {
-    return 1 + target_host.first.size();
+    domain_endpoint_view const& target_host) {
+    return 1 + target_host.domain.size();
 }
 
 inline
@@ -127,20 +150,20 @@ inline
 std::size_t
 write_target_host(
     unsigned char* buffer,
-    std::pair<string_view, std::uint16_t> const& target_host) {
+    domain_endpoint_view const& target_host) {
     // ATYP
     buffer[0] = static_cast<unsigned char>(
             address_type::domain_name);
 
     // DST. ADDR
     buffer[1] = static_cast<unsigned char>(
-        target_host.first.size());
+        target_host.domain.size());
     std::size_t i = 2;
-    for (auto b: target_host.first)
+    for (auto b: target_host.domain)
         buffer[i++] = static_cast<unsigned char>(b);
 
     // DSTPORT
-    std::uint16_t target_port = target_host.second;
+    std::uint16_t target_port = target_host.port;
     buffer[i++] = target_port >> 8;
     buffer[i++] = target_port & 0xFF;
 
@@ -265,7 +288,7 @@ public:
         , s_(s)
         , buf_(prepare_greeting(opt))
         , target_(target_host)
-        , opt_(opt)
+        // , opt_(opt)
     {
         BOOST_ASSERT(buf_.size() > 2);
         auth_code_ = buf_[2];
@@ -371,7 +394,7 @@ private:
     std::vector<unsigned char, Allocator> buf_;
     unsigned char auth_code_ = 0x00;
     Endpoint target_;
-    AuthOptions opt_;
+    // AuthOptions opt_;
     asio::coroutine coro_;
 };
 
@@ -441,9 +464,12 @@ connect(
     AuthOptions opt,
     error_code& ec)
 {
+    detail::domain_endpoint_view ep;
+    ep.domain = target_host;
+    ep.port = target_port;
     return detail::connect_any(
         stream,
-        std::make_pair(target_host, target_port),
+        ep,
         opt,
         ec);
 }
@@ -481,11 +507,13 @@ async_connect(
     AuthOptions opt,
     CompletionToken&& token)
 {
+    detail::domain_endpoint ep;
+    ep.domain = std::string(app_domain);
+    ep.port = app_port;
     return detail::async_connect_any(
-        s, std::make_pair(std::string(app_domain), app_port), opt, token);
+        s, ep, opt, token);
 }
 
-} // io
 } // socks_proto
 } // boost
 

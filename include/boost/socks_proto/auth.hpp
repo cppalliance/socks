@@ -7,15 +7,14 @@
 // Official repository: https://github.com/alandefreitas/socks_proto
 //
 
-#ifndef BOOST_SOCKS_PROTO_IO_AUTH_HPP
-#define BOOST_SOCKS_PROTO_IO_AUTH_HPP
+#ifndef BOOST_SOCKS_PROTO_AUTH_HPP
+#define BOOST_SOCKS_PROTO_AUTH_HPP
 
 #include <boost/socks_proto/detail/config.hpp>
 #include <boost/socks_proto/string_view.hpp>
 
 namespace boost {
 namespace socks_proto {
-namespace io {
 namespace auth {
     /// Options for no authentication operation
     struct no_auth
@@ -29,10 +28,7 @@ namespace auth {
         string_view pass;
     };
 } // auth
-} // io
 } // socks_proto
 } // boost
-
-#include <boost/socks_proto/io/impl/connect_v4.hpp>
 
 #endif

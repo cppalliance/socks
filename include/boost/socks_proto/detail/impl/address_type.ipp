@@ -7,14 +7,15 @@
 // Official repository: https://github.com/CPPAlliance/http_proto
 //
 
-#ifndef BOOST_SOCKS_PROTO_IMPL_ADDRESS_TYPE_IPP
-#define BOOST_SOCKS_PROTO_IMPL_ADDRESS_TYPE_IPP
+#ifndef BOOST_SOCKS_PROTO_DETAIL_IMPL_ADDRESS_TYPE_IPP
+#define BOOST_SOCKS_PROTO_DETAIL_IMPL_ADDRESS_TYPE_IPP
 
-#include <boost/socks_proto/address_type.hpp>
+#include <boost/socks_proto/detail/address_type.hpp>
 #include <ostream>
 
 namespace boost {
 namespace socks_proto {
+namespace detail {
 
 address_type
 to_address_type(unsigned v)
@@ -57,6 +58,7 @@ operator<<(
     return os;
 }
 
+} // detail
 } // http_proto
 } // boost
 

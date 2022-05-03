@@ -9,8 +9,9 @@
 //
 
 // Test that header file is self-contained.
-#include <boost/socks_proto/io/connect.hpp>
-#include <boost/socks_proto/reply_code.hpp>
+#include <boost/socks_proto/connect.hpp>
+#include <boost/socks_proto/detail/auth_method.hpp>
+#include <boost/socks_proto/detail/reply_code.hpp>
 #include <array>
 #include "stream.hpp"
 #include "test_suite.hpp"
@@ -23,10 +24,13 @@ class io_connect_test
 public:
     using io_context = asio::io_context;
     using endpoint = asio::ip::tcp::endpoint;
+    using reply_code = detail::reply_code;
+    using address_type = detail::address_type;
+    using auth_method = detail::auth_method;
 
     static
     std::array<unsigned char, 2>
-    make_greet_reply(auth_method m)
+    make_greet_reply(detail::auth_method m)
     {
         return {{0x05, static_cast<unsigned char>(m)}};
     }
@@ -83,13 +87,13 @@ public:
         // Connect to proxy server
         endpoint ep(asio::ip::make_address_v4(127), 0);
         error_code ec;
-        endpoint app_ep = io::connect(s, ep, auth, ec);
+        endpoint app_ep = connect(s, ep, auth, ec);
         // Compare to expected write values
-        auto buf1 = io::detail::prepare_greeting(auth);
-        auto buf2 = io::detail::prepare_request_v5(ep);
+        auto buf1 = detail::prepare_greeting(auth);
+        auto buf2 = detail::prepare_request_v5(ep);
         BOOST_TEST(s.equal_write_buffers(
             std::array<asio::const_buffer, 2>{
-                asio::buffer(buf1), asio::buffer(buf2)}));
+                asio::buffer(buf1), asio::buffer(buf2.data(), buf2.size())}));
         BOOST_TEST_EQ(app_ep.address().to_v4(),
                       asio::ip::make_address_v4("0.0.0.0"));
         BOOST_TEST_EQ(ec, exp_ec);
@@ -111,13 +115,13 @@ public:
                 g.size(),
                 r.data(),
                 r.size(),
-                io::auth::no_auth{},
+                auth::no_auth{},
                 error::succeeded);
         }
 
         // user
         {
-            io::auth::userpass a{"user", "pass"};
+            auth::userpass a{"user", "pass"};
             auto g = make_greet_reply(
                 auth_method::userpass);
             auto r = make_v5_reply(
@@ -148,14 +152,14 @@ public:
             bytes.fill(0x00);
             endpoint ep(asio::ip::make_address_v6(bytes), 0);
             error_code ec;
-            auto auth = io::auth::no_auth{};
-            endpoint app_ep = io::connect(s, ep, auth, ec);
+            auto auth = auth::no_auth{};
+            endpoint app_ep = connect(s, ep, auth, ec);
             // Compare to expected write values
-            auto buf1 = io::detail::prepare_greeting(auth);
-            auto buf2 = io::detail::prepare_request_v5(ep);
+            auto buf1 = detail::prepare_greeting(auth);
+            auto buf2 = detail::prepare_request_v5(ep);
             BOOST_TEST(s.equal_write_buffers(
                 std::array<asio::const_buffer, 2>{
-                    asio::buffer(buf1), asio::buffer(buf2)}));
+                    asio::buffer(buf1), asio::buffer(buf2.data(), buf2.size())}));
             BOOST_TEST_EQ(app_ep.address().to_v6(),
                           asio::ip::make_address_v6(bytes));
             BOOST_TEST_EQ(ec, error::succeeded);
@@ -172,7 +176,7 @@ public:
                 g.size(),
                 r.data(),
                 r.size(),
-                io::auth::no_auth{},
+                auth::no_auth{},
                 asio::error::access_denied);
         }
 
@@ -189,7 +193,7 @@ public:
                 g.size(),
                 r.data(),
                 r.size(),
-                io::auth::no_auth{},
+                auth::no_auth{},
                 asio::error::no_protocol_option);
         }
 
@@ -206,7 +210,7 @@ public:
                 g.size(),
                 r.data(),
                 r.size(),
-                io::auth::no_auth{},
+                auth::no_auth{},
                 asio::error::no_protocol_option);
         }
 
@@ -222,7 +226,7 @@ public:
                 g.size(),
                 r.data(),
                 r.size(),
-                io::auth::no_auth{},
+                auth::no_auth{},
                 error::general_failure);
         }
 
@@ -240,7 +244,7 @@ public:
                 g.size(),
                 r.data(),
                 r.size(),
-                io::auth::no_auth{},
+                auth::no_auth{},
                 error::succeeded);
         }
 
@@ -252,8 +256,8 @@ public:
             s.reset_write_ec(asio::error::no_permission);
             endpoint ep(asio::ip::make_address_v4(127), 0);
             error_code ec;
-            io::auth::no_auth auth{};
-            endpoint app_ep = io::connect(s, ep, auth, ec);
+            auth::no_auth auth{};
+            endpoint app_ep = connect(s, ep, auth, ec);
             BOOST_TEST_EQ(app_ep.address().to_v4(),
                           asio::ip::make_address_v4("0.0.0.0"));
             BOOST_TEST_EQ(ec, asio::error::no_permission);
@@ -270,9 +274,9 @@ public:
             s.reset_write_ec2(asio::error::no_permission);
             endpoint ep(asio::ip::make_address_v4(127), 0);
             error_code ec;
-            io::auth::no_auth auth{};
-            endpoint app_ep = io::connect(s, ep, auth, ec);
-            auto buf1 = io::detail::prepare_greeting(auth);
+            auth::no_auth auth{};
+            endpoint app_ep = connect(s, ep, auth, ec);
+            auto buf1 = detail::prepare_greeting(auth);
             BOOST_TEST(s.equal_write_buffers(asio::buffer(buf1)));
             BOOST_TEST_EQ(app_ep.address().to_v4(),
                           asio::ip::make_address_v4("0.0.0.0"));
@@ -287,9 +291,9 @@ public:
             s.reset_read_ec(asio::error::no_permission);
             endpoint ep(asio::ip::make_address_v4(127), 0);
             error_code ec;
-            io::auth::no_auth auth{};
-            endpoint app_ep = io::connect(s, ep, io::auth::no_auth{}, ec);
-            auto buf1 = io::detail::prepare_greeting(auth);
+            auth::no_auth auth{};
+            endpoint app_ep = connect(s, ep, auth::no_auth{}, ec);
+            auto buf1 = detail::prepare_greeting(auth);
             BOOST_TEST(s.equal_write_buffers(asio::buffer(buf1)));
             BOOST_TEST_EQ(app_ep.address().to_v4(),
                           asio::ip::make_address_v4("0.0.0.0"));
@@ -306,13 +310,13 @@ public:
             s.reset_read_ec2(asio::error::no_permission);
             endpoint ep(asio::ip::make_address_v4(127), 0);
             error_code ec;
-            io::auth::no_auth auth{};
-            endpoint app_ep = io::connect(s, ep, io::auth::no_auth{}, ec);
-            auto buf1 = io::detail::prepare_greeting(auth);
-            auto buf2 = io::detail::prepare_request_v5(ep);
+            auth::no_auth auth{};
+            endpoint app_ep = connect(s, ep, auth::no_auth{}, ec);
+            auto buf1 = detail::prepare_greeting(auth);
+            auto buf2 = detail::prepare_request_v5(ep);
             BOOST_TEST(s.equal_write_buffers(
                 std::array<asio::const_buffer, 2>{
-                    asio::buffer(buf1), asio::buffer(buf2)}));
+                    asio::buffer(buf1), asio::buffer(buf2.data(), buf2.size())}));
             BOOST_TEST_EQ(app_ep.address().to_v4(),
                           asio::ip::make_address_v4("0.0.0.0"));
             BOOST_TEST_EQ(ec, asio::error::no_permission);
@@ -334,14 +338,14 @@ public:
             ip_bytes.fill(0);
             endpoint ep(asio::ip::make_address_v6(ip_bytes), 0);
             error_code ec;
-            io::auth::no_auth auth{};
-            endpoint app_ep = io::connect(s, ep, auth, ec);
+            auth::no_auth auth{};
+            endpoint app_ep = connect(s, ep, auth, ec);
             // Compare to expected write values
-            auto buf1 = io::detail::prepare_greeting(auth);
-            auto buf2 = io::detail::prepare_request_v5(ep);
+            auto buf1 = detail::prepare_greeting(auth);
+            auto buf2 = detail::prepare_request_v5(ep);
             BOOST_TEST(s.equal_write_buffers(
                 std::array<asio::const_buffer, 2>{
-                    asio::buffer(buf1), asio::buffer(buf2)}));
+                    asio::buffer(buf1), asio::buffer(buf2.data(), buf2.size())}));
             BOOST_TEST(app_ep.address().is_v6());
             BOOST_TEST_EQ(app_ep.address().to_v6(),
                           asio::ip::make_address_v6(ip_bytes));
@@ -353,7 +357,7 @@ public:
             io_context ioc;
             // Mock proxy response
             test::stream s(ioc);
-            io::auth::no_auth auth;
+            auth::no_auth auth;
             auto greet_reply = make_greet_reply(
                 auth_method::no_authentication);
             s.reset_read(greet_reply.data(), greet_reply.size());
@@ -362,14 +366,16 @@ public:
             // Connect to proxy server
             error_code ec;
             endpoint app_ep =
-                io::connect(s, "www.example.com", 80, auth, ec);
+                connect(s, "www.example.com", 80, auth, ec);
             // Compare to expected write values
-            auto buf1 = io::detail::prepare_greeting(auth);
-            std::pair<string_view, std::uint16_t> ep("www.example.com", 80);
-            auto buf2 = io::detail::prepare_request_v5(ep);
+            auto buf1 = detail::prepare_greeting(auth);
+            detail::domain_endpoint_view ep;
+            ep.domain  = "www.example.com";
+            ep.port = 80;
+            auto buf2 = detail::prepare_request_v5(ep);
             BOOST_TEST(s.equal_write_buffers(
                 std::array<asio::const_buffer, 2>{
-                    asio::buffer(buf1), asio::buffer(buf2)}));
+                    asio::buffer(buf1), asio::buffer(buf2.data(), buf2.size())}));
             BOOST_TEST_EQ(app_ep.address().to_v4(),
                           asio::ip::make_address_v4("0.0.0.0"));
             BOOST_TEST_EQ(ec, error::succeeded);
@@ -383,8 +389,8 @@ public:
             s.reset_read_ec(asio::error::no_permission);
             endpoint ep(asio::ip::make_address_v4(127), 0);
             error_code ec;
-            endpoint app_ep = io::connect(
-                s, "www.example.com", 80, io::auth::no_auth{}, ec);
+            endpoint app_ep = connect(
+                s, "www.example.com", 80, auth::no_auth{}, ec);
             BOOST_TEST_EQ(app_ep.address().to_v4(),
                           asio::ip::make_address_v4("0.0.0.0"));
             BOOST_TEST_EQ(ec, asio::error::no_permission);
@@ -400,8 +406,8 @@ public:
             s.reset_read_ec(asio::error::no_permission);
             endpoint ep(asio::ip::make_address_v4(127), 0);
             error_code ec;
-            endpoint app_ep = io::connect(
-                s, "www.example.com", 80, io::auth::no_auth{}, ec);
+            endpoint app_ep = connect(
+                s, "www.example.com", 80, auth::no_auth{}, ec);
             BOOST_TEST_EQ(app_ep.address().to_v4(),
                           asio::ip::make_address_v4("0.0.0.0"));
             BOOST_TEST_EQ(ec, asio::error::no_permission);
@@ -426,15 +432,15 @@ public:
         s.append_read(reply, reply_n);
         // Connect to proxy server
         endpoint ep(asio::ip::make_address_v4(127), 0);
-        io::async_connect(s, ep, auth,
+        async_connect(s, ep, auth,
             [&](error_code ec, endpoint app_ep)
         {
             // Compare to expected write values
-            auto buf1 = io::detail::prepare_greeting(auth);
-            auto buf2 = io::detail::prepare_request_v5(ep);
+            auto buf1 = detail::prepare_greeting(auth);
+            auto buf2 = detail::prepare_request_v5(ep);
             BOOST_TEST(s.equal_write_buffers(
                 std::array<asio::const_buffer, 2>{
-                    asio::buffer(buf1), asio::buffer(buf2)}));
+                    asio::buffer(buf1), asio::buffer(buf2.data(), buf2.size())}));
             BOOST_TEST_EQ(app_ep.address().to_v4(),
                           asio::ip::make_address_v4("0.0.0.0"));
             BOOST_TEST_EQ(ec, exp_ec);
@@ -457,7 +463,7 @@ public:
                 g.size(),
                 r.data(),
                 r.size(),
-                io::auth::no_auth{},
+                auth::no_auth{},
                 error::succeeded);
         }
 
@@ -473,7 +479,7 @@ public:
                 g.size(),
                 r.data(),
                 r.size(),
-                io::auth::userpass{"user", "pass"},
+                auth::userpass{"user", "pass"},
                 error::succeeded);
         }
 
@@ -488,7 +494,7 @@ public:
                 g.size(),
                 r.data(),
                 r.size(),
-                io::auth::no_auth{},
+                auth::no_auth{},
                 asio::error::access_denied);
         }
 
@@ -505,7 +511,7 @@ public:
                 g.size(),
                 r.data(),
                 r.size(),
-                io::auth::no_auth{},
+                auth::no_auth{},
                 asio::error::no_protocol_option);
         }
 
@@ -521,7 +527,7 @@ public:
                 g.size(),
                 r.data(),
                 r.size(),
-                io::auth::no_auth{},
+                auth::no_auth{},
                 error::connection_refused);
         }
 
@@ -541,7 +547,7 @@ public:
                 g.size(),
                 r.data(),
                 r.size(),
-                io::auth::no_auth{},
+                auth::no_auth{},
                 error::succeeded);
         }
 
@@ -551,10 +557,10 @@ public:
             test::stream s(ioc);
             s.reset_write_ec(asio::error::no_permission);
             endpoint ep(asio::ip::make_address_v4(127), 0);
-            io::async_connect(s, ep, io::auth::no_auth{},
+            async_connect(s, ep, auth::no_auth{},
                                  [&](error_code ec, endpoint app_ep)
                                  {
-                auto buf = io::detail::prepare_greeting(io::auth::no_auth{});
+                auto buf = detail::prepare_greeting(auth::no_auth{});
                 BOOST_TEST(s.equal_write_buffers(asio::buffer(buf)));
                 BOOST_TEST_EQ(app_ep.address().to_v4(),
                               asio::ip::make_address_v4("0.0.0.0"));
@@ -572,14 +578,14 @@ public:
             s.reset_read(g.data(), g.size());
             s.reset_write_ec2(asio::error::no_permission);
             endpoint ep(asio::ip::make_address_v4(127), 0);
-            io::async_connect(s, ep, io::auth::no_auth{},
+            async_connect(s, ep, auth::no_auth{},
                                  [&](error_code ec, endpoint app_ep)
                                  {
-                auto buf1 = io::detail::prepare_greeting(io::auth::no_auth{});
-                auto buf2 = io::detail::prepare_request_v5(ep);
+                auto buf1 = detail::prepare_greeting(auth::no_auth{});
+                auto buf2 = detail::prepare_request_v5(ep);
                 BOOST_TEST(s.equal_write_buffers(
                     std::array<asio::const_buffer, 2>{
-                        asio::buffer(buf1), asio::buffer(buf2)}));
+                        asio::buffer(buf1), asio::buffer(buf2.data(), buf2.size())}));
                 BOOST_TEST_EQ(app_ep.address().to_v4(),
                               asio::ip::make_address_v4("0.0.0.0"));
                 BOOST_TEST_EQ(ec, asio::error::no_permission);
@@ -594,10 +600,10 @@ public:
             s.reset_read(nullptr, 0);
             s.reset_read_ec(asio::error::no_permission);
             endpoint ep(asio::ip::make_address_v4(127), 0);
-            io::async_connect(s, ep, io::auth::no_auth{},
+            async_connect(s, ep, auth::no_auth{},
                                  [&](error_code ec, endpoint app_ep)
                                  {
-                auto buf = io::detail::prepare_greeting(io::auth::no_auth{});
+                auto buf = detail::prepare_greeting(auth::no_auth{});
                 BOOST_TEST(s.equal_write_buffers(asio::buffer(buf)));
                 BOOST_TEST_EQ(app_ep.address().to_v4(),
                               asio::ip::make_address_v4("0.0.0.0"));
@@ -618,14 +624,14 @@ public:
             s.append_read(r.data(), r.size());
             s.reset_read_ec2(asio::error::no_permission);
             endpoint ep(asio::ip::make_address_v4(127), 0);
-            io::async_connect(s, ep, io::auth::no_auth{},
+            async_connect(s, ep, auth::no_auth{},
                                  [&](error_code ec, endpoint app_ep)
                                  {
-                auto buf1 = io::detail::prepare_greeting(io::auth::no_auth{});
-                auto buf2 = io::detail::prepare_request_v5(ep);
+                auto buf1 = detail::prepare_greeting(auth::no_auth{});
+                auto buf2 = detail::prepare_request_v5(ep);
                 BOOST_TEST(s.equal_write_buffers(
                     std::array<asio::const_buffer, 2>{
-                        asio::buffer(buf1), asio::buffer(buf2)}));
+                        asio::buffer(buf1), asio::buffer(buf2.data(), buf2.size())}));
                 BOOST_TEST_EQ(app_ep.address().to_v4(),
                               asio::ip::make_address_v4("0.0.0.0"));
                 BOOST_TEST_EQ(ec, asio::error::no_permission);
@@ -640,8 +646,8 @@ public:
             s.reset_read(nullptr, 0);
             s.reset_read_ec(asio::error::no_permission);
             endpoint ep(asio::ip::make_address_v4(127), 0);
-            io::async_connect(
-                s, "www.example.com", 80, io::auth::no_auth{},
+            async_connect(
+                s, "www.example.com", 80, auth::no_auth{},
                 [](error_code ec, endpoint app_ep)
                 {
                 BOOST_TEST_EQ(app_ep.address().to_v4(),
@@ -660,8 +666,8 @@ public:
             s.reset_read(r.data(), r.size());
             s.reset_read_ec(asio::error::no_permission);
             endpoint ep(asio::ip::make_address_v4(127), 0);
-            io::async_connect(
-                s, "www.example.com", 80, io::auth::no_auth{},
+            async_connect(
+                s, "www.example.com", 80, auth::no_auth{},
                 [](error_code ec, endpoint app_ep)
                 {
                 BOOST_TEST_EQ(app_ep.address().to_v4(),

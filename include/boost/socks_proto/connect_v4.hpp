@@ -3,11 +3,11 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#ifndef BOOST_SOCKS_PROTO_IO_CONNECT_V4_HPP
-#define BOOST_SOCKS_PROTO_IO_CONNECT_V4_HPP
+#ifndef BOOST_SOCKS_PROTO_CONNECT_V4_HPP
+#define BOOST_SOCKS_PROTO_CONNECT_V4_HPP
 
 #include <boost/socks_proto/detail/config.hpp>
-#include <boost/socks_proto/io/endpoint.hpp>
+#include <boost/socks_proto/endpoint.hpp>
 #include <boost/socks_proto/string_view.hpp>
 #include <boost/socks_proto/error.hpp>
 #include <boost/asio/async_result.hpp>
@@ -15,7 +15,6 @@
 
 namespace boost {
 namespace socks_proto {
-namespace io {
 
 /** Connect to the application server through a SOCKS4 server
 
@@ -82,6 +81,8 @@ connect_v4(
 
     @param s SyncStream connected to a SOCKS server.
     @param ep Application server endpoint.
+    @param ident_id Client ident ID.
+    @param token Completion token.
 
     @return server bound address and port
 
@@ -101,10 +102,9 @@ async_connect_v4(
     string_view ident_id,
     CompletionToken&& token);
 
-} // io
 } // socks_proto
 } // boost
 
-#include <boost/socks_proto/io/impl/connect_v4.hpp>
+#include <boost/socks_proto/impl/connect_v4.hpp>
 
 #endif

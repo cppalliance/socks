@@ -8,21 +8,5 @@
 // Official repository: https://github.com/alandefreitas/socks_proto
 //
 
-#ifndef BOOST_SOCKS_PROTO_IO_ENDPOINT_HPP
-#define BOOST_SOCKS_PROTO_IO_ENDPOINT_HPP
-
-#include <boost/socks_proto/detail/config.hpp>
-#include <boost/asio/ip/tcp.hpp>
-
-namespace boost {
-namespace socks_proto {
-namespace io {
-
-/// Type used to represent string views
-using endpoint = asio::ip::tcp::endpoint;
-
-} // io
-} // socks_proto
-} // boost
-
-#endif
+// Test that header file is self-contained.
+#include <boost/socks_proto/auth.hpp>

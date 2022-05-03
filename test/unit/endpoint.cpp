@@ -9,24 +9,4 @@
 //
 
 // Test that header file is self-contained.
-#include <boost/socks_proto/request_view.hpp>
-#include "test_suite.hpp"
-
-namespace boost {
-namespace socks_proto {
-
-class request_view_test
-{
-public:
-    void
-    run()
-    {
-    }
-};
-
-TEST_SUITE(
-    request_view_test,
-    "boost.socks_proto.request_view");
-
-} // socks_proto
-} // boost
+#include <boost/socks_proto/endpoint.hpp>

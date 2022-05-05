@@ -13,7 +13,6 @@
 
 #include <boost/socks_proto/error.hpp>
 #include <boost/assert/source_location.hpp>
-#include <boost/exception/diagnostic_information.hpp>
 
 namespace boost {
 namespace socks_proto {

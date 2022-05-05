@@ -46,9 +46,10 @@ make_error_code(error e)
             case error::cannot_connect_to_identd_on_the_client: return "Connection not allowed by ruleset";
             case error::client_and_identd_report_different_user_ids: return "Network unreachable";
             // Parsing error
-            case error::bad_request_size: return "Bad request size";
-            case error::bad_request_version: return "Bad request version";
-            case error::bad_request_command: return "Bad request command";
+            case error::bad_reply_size: return "Bad reply size";
+            case error::bad_reply_version: return "Bad reply version";
+            case error::bad_auth_server_choice: return "Bad authentication server choice";
+            case error::bad_reply_command: return "Bad reply command";
             case error::bad_reserved_component: return "Bad reserved component";
             case error::bad_address_type: return "Bad address type";
             case error::unassigned:
@@ -78,9 +79,10 @@ make_error_code(error e)
             case error::client_and_identd_report_different_user_ids:
             case error::unassigned:
                 return condition::reply_error;
-            case error::bad_request_size:
-            case error::bad_request_version:
-            case error::bad_request_command:
+            case error::bad_reply_size:
+            case error::bad_reply_version:
+            case error::bad_auth_server_choice:
+            case error::bad_reply_command:
             case error::bad_reserved_component:
             case error::bad_address_type:
                 return condition::parse_error;

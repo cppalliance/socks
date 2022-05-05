@@ -92,17 +92,20 @@ enum class error
     //----------------------------------
 
     //
-    // Parsing errors
+    // Client errors
     //
 
-    /// Bad request size
-    bad_request_size              = 0xA0,
+    /// Bad reply size
+    bad_reply_size              = 0xA0,
 
-    /// Bad request version
-    bad_request_version,
+    /// Bad reply version
+    bad_reply_version,
 
-    /// Bad request command
-    bad_request_command,
+    /// Bad authentication server choice
+    bad_auth_server_choice,
+
+    /// Bad reply command
+    bad_reply_command,
 
     /// Bad reserved component
     bad_reserved_component,

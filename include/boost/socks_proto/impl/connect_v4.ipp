@@ -16,53 +16,72 @@ namespace boost {
 namespace socks_proto {
 namespace detail {
 
-asio::ip::tcp::endpoint
+std::size_t
+prepare_request_v4(
+    unsigned char* buffer,
+    std::size_t n,
+    asio::ip::tcp::endpoint const& target_host,
+    core::string_view socks_user)
+{
+    BOOST_ASSERT(n >= 9 + socks_user.size());
+    ignore_unused(n);
+
+    // Prepare a CONNECT request
+    // VER
+    buffer[0] = static_cast<unsigned char>(
+        version::socks_4);
+
+    // CMD
+    buffer[1] = static_cast<unsigned char>(
+        command::connect);
+
+    // DSTPORT
+    std::uint16_t target_port = target_host.port();
+    buffer[2] = target_port >> 8;
+    buffer[3] = target_port & 0xFF;
+
+    // DSTIP
+    auto ip_bytes =
+        target_host.address().to_v4().to_bytes();
+    buffer[4] = ip_bytes[0];
+    buffer[5] = ip_bytes[1];
+    buffer[6] = ip_bytes[2];
+    buffer[7] = ip_bytes[3];
+
+    // USERID
+    for (std::size_t i = 0; i < socks_user.size(); ++i)
+        buffer[8 + i] = static_cast<unsigned char>(
+            socks_user[i]);
+
+    // NULL
+    buffer[8 + socks_user.size()] = '\0';
+
+    return 9 + socks_user.size();
+}
+
+
+endpoint
 parse_reply_v4(
     unsigned char const* buffer,
     std::size_t n,
     error_code& ec)
 {
-    namespace asio = asio;
-    using tcp = asio::ip::tcp;
-    ec = {};
-
-    if (n < 2)
-    {
-        // Successful messages have size 8
-        // Some servers return only 2 bytes,
-        // since DSTPORT and DSTIP can be ignored
-        // in SOCKS4 or to return error messages,
-        // including SOCKS5 errors
-        ec = asio::error::access_denied;
-        return {};
-    }
+    BOOST_ASSERT(n == 8);
 
     // VER:
-    // In SOCKS4, the reply version is allowed to
+    // In SOCKS4, the *reply* version is allowed to
     // be 0x00. In general, this is the SOCKS version as
     // 0x04.
     if (buffer[0] != 0x00 && buffer[0] != 0x04)
     {
-        ec = asio::error::no_protocol_option;
+        ec = error::bad_reply_version;
         return {};
     }
 
     // REP: the res
-    auto rep = to_reply_code_v4(buffer[1]);
-    if (rep != reply_code_v4::request_granted)
-    {
-        ec = static_cast<error>(buffer[1]);
+    ec = static_cast<error>(to_reply_code_v4(buffer[1]));
+    if (ec != condition::succeeded)
         return {};
-    }
-
-    // DSTPORT and DSTIP might be ignored
-    // in SOCKS4, which does not represent
-    // an error
-    if (n < 8)
-    {
-        ec = {};
-        return {};
-    }
 
     // DSTPORT
     std::uint16_t port{buffer[2]};
@@ -74,7 +93,7 @@ parse_reply_v4(
     ip = (ip << 8) | buffer[5];
     ip = (ip << 8) | buffer[6];
 
-    tcp::endpoint ep{
+    endpoint ep{
         asio::ip::make_address_v4(ip),
         port
     };

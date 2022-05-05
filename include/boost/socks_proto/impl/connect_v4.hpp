@@ -27,60 +27,22 @@
 
 #include <boost/core/allocator_access.hpp>
 #include <boost/core/empty_value.hpp>
+#include <boost/core/ignore_unused.hpp>
 
 namespace boost {
 namespace socks_proto {
 namespace detail {
 
-// All these operations are repeatedly
-// implementing a pattern that should be
-// later encapsulated into
-// socks_proto::request
-// and socks_proto::reply
-template <class Allocator = std::allocator<unsigned char>>
-std::vector<unsigned char, Allocator>
+BOOST_SOCKS_PROTO_DECL
+std::size_t
 prepare_request_v4(
-    asio::ip::tcp::endpoint const& target_host,
-    core::string_view socks_user,
-    Allocator const& a = {})
-{
-    std::vector<unsigned char, Allocator> buffer(
-        9 + socks_user.size(), 0x00, a);
-
-    // Prepare a CONNECT request
-    // VER
-    buffer[0] = static_cast<unsigned char>(
-        version::socks_4);
-
-    // CMD
-    buffer[1] = static_cast<unsigned char>(
-        command::connect);
-
-    // DSTPORT
-    std::uint16_t target_port = target_host.port();
-    buffer[2] = target_port >> 8;
-    buffer[3] = target_port & 0xFF;
-
-    // DSTIP
-    auto ip_bytes =
-        target_host.address().to_v4().to_bytes();
-    buffer[4] = ip_bytes[0];
-    buffer[5] = ip_bytes[1];
-    buffer[6] = ip_bytes[2];
-    buffer[7] = ip_bytes[3];
-
-    // USERID
-    for (std::size_t i = 0; i < socks_user.size(); ++i)
-        buffer[8 + i] = socks_user[i];
-
-    // NULL
-    buffer.back() = '\0';
-
-    return buffer;
-}
+    unsigned char* buffer,
+    std::size_t n,
+    endpoint const& target_host,
+    core::string_view socks_user);
 
 BOOST_SOCKS_PROTO_DECL
-asio::ip::tcp::endpoint
+endpoint
 parse_reply_v4(
     unsigned char const* buffer,
     std::size_t n,
@@ -92,12 +54,19 @@ class connect_v4_op
 public:
     connect_v4_op(
         Stream& s,
-        asio::ip::tcp::endpoint target_host,
+        endpoint target_host,
         string_view socks_user,
         Allocator const& a)
         : s_(s)
-        , buf_(prepare_request_v4(target_host, socks_user, a))
+        , buf_(9 + socks_user.size(), 0x00, a)
     {
+        std::size_t n = prepare_request_v4(
+            buf_.data(),
+            buf_.size(),
+            target_host,
+            socks_user);
+        BOOST_ASSERT(n == buf_.size());
+        ignore_unused(n);
     }
 
     template <typename Self>
@@ -107,7 +76,7 @@ public:
         error_code ec = {},
         std::size_t n = 0)
     {
-        asio::ip::tcp::endpoint ep{};
+        endpoint ep{};
         BOOST_ASIO_CORO_REENTER(coro_)
         {
             // Send the CONNECT request
@@ -119,45 +88,39 @@ public:
                 s_,
                 asio::buffer(buf_),
                 std::move(self));
-            // Handle successful CONNECT request
-            // Prepare for CONNECT reply
             if (ec.failed())
                 goto complete;
-            BOOST_ASSERT(buf_.capacity() >= 8);
-            buf_.resize(8);
+
             // Read the CONNECT reply
+            BOOST_ASSERT(buf_.capacity() >= 8);
             BOOST_ASIO_HANDLER_LOCATION((
                 __FILE__, __LINE__,
                 "asio::async_read"));
             BOOST_ASIO_CORO_YIELD
             asio::async_read(
                 s_,
-                asio::buffer(buf_),
+                asio::buffer(buf_.data(), 8),
                 std::move(self));
-            // Handle successful CONNECT reply
-            // Parse the CONNECT reply
             if (ec.failed() &&
                 ec != asio::error::eof)
             {
                 // asio::error::eof indicates there was
                 // a SOCKS error and the server
-                // closed the connection cleanly
-                // we still want to parse the response
+                // closed the connection cleanly.
+                // This should happen whenever
+                // the reply code is not "succeeded".
+                // We still want to parse the response
                 // to find out what kind of error
+                // this is.
                 goto complete;
             }
-            BOOST_ASSERT(buf_.capacity() >= n);
-            buf_.resize(n);
+            if (n != 8)
             {
-                error_code rec;
-                ep = parse_reply_v4(
-                    buf_.data(),
-                    buf_.size(),
-                    rec);
-                if (rec.failed() &&
-                    rec != error::unassigned)
-                    ec = rec;
+                ec = error::bad_reply_size;
+                goto complete;
             }
+            ep = parse_reply_v4(
+                buf_.data(), n, ec);
         complete:
             {
                 // Free memory before invoking the handler
@@ -187,35 +150,53 @@ connect_v4(
     string_view socks_user,
     error_code& ec)
 {
-    // All these functions are repeatedly
-    // implementing a pattern that should be
-    // encapsulated into socks_proto::request
-    // and socks_proto::reply in the future
-    std::vector<unsigned char> buffer =
-        detail::prepare_request_v4(
-            target_host, socks_user);
-
     // Send a CONNECT request
+    // There's no upper bound on the size of
+    // a SOCKS4 request
+    std::vector<unsigned char> buffer(
+        9 + socks_user.size());
+    std::size_t n = detail::prepare_request_v4(
+        buffer.data(),
+        buffer.size(),
+        target_host,
+        socks_user);
+    BOOST_ASSERT(n == buffer.size());
+    ignore_unused(n);
     asio::write(
         stream,
-        asio::buffer(buffer),
+        asio::buffer(buffer.data(), n),
         ec);
     if (ec.failed())
-        return endpoint{};
+        return {};
 
     // Read the CONNECT reply
-    buffer.resize(8);
-    std::size_t n = asio::read(
+    // A CONNECT reply is always 8 bytes
+    n = asio::read(
         stream,
-        asio::buffer(buffer.data(), buffer.size()),
+        asio::buffer(buffer.data(), 8),
         ec);
-    if (ec.failed() && ec != asio::error::eof)
-        return endpoint{};
+    if (ec.failed() &&
+        ec != asio::error::eof)
+    {
+        // asio::error::eof indicates there was
+        // a SOCKS error and the server
+        // closed the connection cleanly.
+        // This should happen whenever
+        // the reply code is not "succeeded".
+        // We still want to parse the response
+        // to find out what kind of error.
+        return {};
+    }
+    if (n != 8)
+    {
+        ec = error::bad_reply_size;
+        return {};
+    }
 
     // Parse the CONNECT reply
-    buffer.resize(n);
-    return detail::parse_reply_v4(
-        buffer.data(), buffer.size(), ec);
+    auto ep = detail::parse_reply_v4(
+        buffer.data(), n, ec);
+    return ep;
 }
 
 // SOCKS4 connect initiating function

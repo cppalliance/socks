@@ -26,6 +26,21 @@ public:
     using reply_code_v4 = detail::reply_code_v4;
 
     static
+    std::vector<unsigned char>
+    make_request(
+        endpoint const& ep,
+        string_view user)
+    {
+        std::vector<unsigned char> r(9 + user.size());
+        std::size_t n =
+            detail::prepare_request_v4(
+                r.data(), r.size(), ep, user);
+        BOOST_ASSERT(r.size() == n);
+        ignore_unused(n);
+        return r;
+    }
+
+    static
     std::array<unsigned char, 8>
     make_v4_reply(detail::reply_code_v4 r)
     {
@@ -57,7 +72,7 @@ public:
             endpoint ep(asio::ip::make_address_v4(127), 0);
             error_code ec;
             endpoint app_ep = connect_v4(s, ep, user, ec);
-            auto buf = detail::prepare_request_v4(ep, user);
+            auto buf = make_request(ep, user);
             BOOST_TEST(s.equal_write_buffers(asio::buffer(buf)));
             BOOST_TEST_EQ(app_ep.address().to_v4(),
                           asio::ip::make_address_v4("0.0.0.0"));
@@ -68,6 +83,7 @@ public:
         {
             auto r = make_v4_reply(
                 reply_code_v4::request_granted);
+            BOOST_TEST_CHECKPOINT();
             check(r.data(), r.size(), "", {});
         }
 
@@ -75,17 +91,19 @@ public:
         {
             auto r = make_v4_reply(
                 reply_code_v4::request_granted);
+            BOOST_TEST_CHECKPOINT();
             check(r.data(), r.size(), "username", {});
         }
 
         // reply buf too small
         {
             std::array<unsigned char, 1> r = {{0x04}};
+            BOOST_TEST_CHECKPOINT();
             check(
                 r.data(),
                 r.size(),
                 "username",
-                asio::error::access_denied);
+                error::bad_reply_size);
         }
 
         // wrong version
@@ -93,29 +111,19 @@ public:
             auto r = make_v4_reply(
                 reply_code_v4::request_granted);
             r[0] = 0x05;
+            BOOST_TEST_CHECKPOINT();
             check(
                 r.data(),
                 r.size(),
                 "username",
-                asio::error::no_protocol_option);
-        }
-
-        // wrong version
-        {
-            auto r = make_v4_reply(
-                reply_code_v4::request_granted);
-            r[0] = 0x05;
-            check(
-                r.data(),
-                r.size(),
-                "username",
-                asio::error::no_protocol_option);
+                error::bad_reply_version);
         }
 
         // request rejected
         {
             auto r = make_v4_reply(
                 reply_code_v4::request_rejected_or_failed);
+            BOOST_TEST_CHECKPOINT();
             check(
                 r.data(),
                 r.size(),
@@ -130,11 +138,12 @@ public:
                 static_cast<unsigned char>(
                     reply_code_v4::request_granted)
             }};
+            BOOST_TEST_CHECKPOINT();
             check(
                 r.data(),
                 r.size(),
                 "username",
-                {});
+                error::bad_reply_size);
         }
 
         // failure when writing
@@ -146,7 +155,7 @@ public:
             endpoint ep(asio::ip::make_address_v4(127), 0);
             error_code ec;
             endpoint app_ep = connect_v4(s, ep, "", ec);
-            auto buf = detail::prepare_request_v4(ep, "");
+            auto buf = make_request(ep, "");
             BOOST_TEST(s.equal_write_buffers(asio::buffer(buf)));
             BOOST_TEST_EQ(app_ep.address().to_v4(),
                           asio::ip::make_address_v4("0.0.0.0"));
@@ -162,7 +171,7 @@ public:
             endpoint ep(asio::ip::make_address_v4(127), 0);
             error_code ec;
             endpoint app_ep = connect_v4(s, ep, "", ec);
-            auto buf = detail::prepare_request_v4(ep, "");
+            auto buf = make_request(ep, "");
             BOOST_TEST(s.equal_write_buffers(asio::buffer(buf)));
             BOOST_TEST_EQ(app_ep.address().to_v4(),
                           asio::ip::make_address_v4("0.0.0.0"));
@@ -186,7 +195,7 @@ public:
             async_connect_v4(s, ep, user, [&](
                 error_code ec, endpoint app_ep)
             {
-                auto buf = detail::prepare_request_v4(ep, user);
+                auto buf = make_request(ep, user);
                 BOOST_TEST(s.equal_write_buffers(asio::buffer(buf)));
                 BOOST_TEST_EQ(app_ep.address().to_v4(),
                               asio::ip::make_address_v4("0.0.0.0"));
@@ -199,6 +208,7 @@ public:
         {
             auto r = make_v4_reply(
                 reply_code_v4::request_granted);
+            BOOST_TEST_CHECKPOINT();
             check(r.data(), r.size(), "", {});
         }
 
@@ -206,17 +216,19 @@ public:
         {
             auto r = make_v4_reply(
                 reply_code_v4::request_granted);
+            BOOST_TEST_CHECKPOINT();
             check(r.data(), r.size(), "username", {});
         }
 
         // reply buf too small
         {
             std::array<unsigned char, 1> r = {{0x04}};
+            BOOST_TEST_CHECKPOINT();
             check(
                 r.data(),
                 r.size(),
                 "username",
-                asio::error::access_denied);
+                error::bad_reply_size);
         }
 
         // wrong version
@@ -224,29 +236,19 @@ public:
             auto r = make_v4_reply(
                 reply_code_v4::request_granted);
             r[0] = 0x05;
+            BOOST_TEST_CHECKPOINT();
             check(
                 r.data(),
                 r.size(),
                 "username",
-                asio::error::no_protocol_option);
-        }
-
-        // wrong version
-        {
-            auto r = make_v4_reply(
-                reply_code_v4::request_granted);
-            r[0] = 0x05;
-            check(
-                r.data(),
-                r.size(),
-                "username",
-                asio::error::no_protocol_option);
+                error::bad_reply_version);
         }
 
         // request rejected
         {
             auto r = make_v4_reply(
                 reply_code_v4::request_rejected_or_failed);
+            BOOST_TEST_CHECKPOINT();
             check(
                 r.data(),
                 r.size(),
@@ -261,11 +263,12 @@ public:
                 static_cast<unsigned char>(
                     error::request_granted)
             }};
+            BOOST_TEST_CHECKPOINT();
             check(
                 r.data(),
                 r.size(),
                 "username",
-                {});
+                error::bad_reply_size);
         }
 
         // failure when writing
@@ -278,7 +281,7 @@ public:
             async_connect_v4(s, ep, "",
                 [&](error_code ec, endpoint app_ep)
             {
-                auto buf = detail::prepare_request_v4(ep, "");
+                auto buf = make_request(ep, "");
                 BOOST_TEST(s.equal_write_buffers(asio::buffer(buf)));
                 BOOST_TEST_EQ(app_ep.address().to_v4(),
                               asio::ip::make_address_v4("0.0.0.0"));
@@ -297,7 +300,7 @@ public:
             async_connect_v4(s, ep, "",
                 [&](error_code ec, endpoint app_ep)
             {
-                auto buf = detail::prepare_request_v4(ep, "");
+                auto buf = make_request(ep, "");
                 BOOST_TEST(s.equal_write_buffers(asio::buffer(buf)));
                 BOOST_TEST_EQ(app_ep.address().to_v4(),
                               asio::ip::make_address_v4("0.0.0.0"));

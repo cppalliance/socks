@@ -225,10 +225,7 @@ connect_v4(
 // be later encapsulated into
 // socks_proto::request and socks_proto::reply.
 template <class AsyncStream, class CompletionToken>
-typename asio::async_result<
-    typename asio::decay<CompletionToken>::type,
-    void (error_code, endpoint)
->::return_type
+BOOST_SOCKS_PROTO_ASYNC_ENDPOINT(CompletionToken)
 async_connect_v4(
     AsyncStream& s,
     endpoint const& target_host,

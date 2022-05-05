@@ -43,16 +43,17 @@ namespace socks_proto {
 # endif
 #endif
 
-#if 0 // defined but not used yet
-using off_t = ::uint16_t; // private
+/*
+    Asio async result types, such as:
 
-// maximum size of http header,
-// chunk header, or chunk extensions
-#ifndef BOOST_SOCKS_PROTO_MAX_HEADER
-#define BOOST_SOCKS_PROTO_MAX_HEADER 65535U
-#endif
-static constexpr auto max_off_t =
-    BOOST_SOCKS_PROTO_MAX_HEADER;
+    typename asio::async_result<
+        typename asio::decay<CompletionToken>::type,
+        void (error_code, endpoint)
+    >::return_type
+ */
+#ifndef BOOST_SOCKS_PROTO_ASYNC_ENDPOINT
+# define BOOST_SOCKS_PROTO_ASYNC_ENDPOINT(type) \
+     BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(type, void(::boost::socks_proto::error_code, ::boost::asio::ip::tcp::endpoint))
 #endif
 
 } // socks_proto

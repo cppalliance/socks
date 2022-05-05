@@ -480,11 +480,8 @@ connect(
 // - Their implementation includes what should
 // be later encapsulated into
 // socks_proto::request and socks_proto::reply.
-template <class AsyncStream, class AuthOptions, class CompletionToken>
-typename asio::async_result<
-    typename asio::decay<CompletionToken>::type,
-    void (error_code, endpoint)
->::return_type
+template <class AsyncStream, class CompletionToken>
+BOOST_SOCKS_PROTO_ASYNC_ENDPOINT(CompletionToken)
 async_connect(
     AsyncStream& s,
     endpoint const& target_host,
@@ -495,11 +492,8 @@ async_connect(
         s, target_host, opt, token);
 }
 
-template <class AsyncStream, class AuthOptions, class CompletionToken>
-typename asio::async_result<
-    typename asio::decay<CompletionToken>::type,
-    void (error_code, endpoint)
-    >::return_type
+template <class AsyncStream, class CompletionToken>
+BOOST_SOCKS_PROTO_ASYNC_ENDPOINT(CompletionToken)
 async_connect(
     AsyncStream& s,
     string_view app_domain,

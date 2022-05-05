@@ -61,6 +61,7 @@
 [def __SemiRegular__            [@https://en.cppreference.com/w/cpp/concepts/semiregular ['SemiRegular]]]
 [def __Swappable__              [@https://en.cppreference.com/w/cpp/named_req/Swappable ['Swappable]]]
 
+[def __deduced__                [@boost:/doc/html/boost_asio/reference/asynchronous_operations.html#boost_asio.reference.asynchronous_operations.automatic_deduction_of_initiating_function_return_type ['DEDUCED]]]
 [def __string_view__            [link socks_proto.ref.boost__socks_proto__string_view `string_view`]]
 [def __connect_v4__             [link socks_proto.ref.boost__socks_proto__connect_v4 `connect_v4`]]
 [def __async_connect_v4__       [link socks_proto.ref.boost__socks_proto__async_connect_v4 `async_connect_v4`]]

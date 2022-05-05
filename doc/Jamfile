@@ -38,6 +38,8 @@ docca.reference reference.qbk
             BOOST_SOCKS_PROTO_PUBLIC \\
             BOOST_SOCKS_PROTO_FORCEINLINE \\
             \"BOOST_SOCKS_PROTO_NODISCARD=[[nodiscard]]\" \\
+            \"BOOST_SOCKS_PROTO_DEDUCED=__deduced__\" \\
+            \"BOOST_SOCKS_PROTO_ASYNC_ENDPOINT(type)=__deduced__\" \\
             \"BOOST_STATIC_ASSERT(x)=\" \\
             \"BOOST_SOCKS_PROTO_INLINE_VARIABLE(v, t)=constexpr t v;\""
         <doxygen:param>ABBREVIATE_BRIEF=

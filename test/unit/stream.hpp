@@ -49,7 +49,9 @@ using make_index_sequence =
 template <class Handler, class... Args>
 struct bound_handler {
     explicit
-    bound_handler(Handler&& handler, const Args&... args)
+    bound_handler(
+        Handler&& handler,
+        const Args&... args)
         : handler_(std::move(handler))
         , args_(std::make_tuple(args...))
     {
@@ -65,7 +67,8 @@ struct bound_handler {
                 >::value>{});
     }
 
-    void operator()() const
+    void
+    operator()() const
     {
         apply(
             detail::make_index_sequence<
@@ -165,7 +168,8 @@ public:
         rec_ = rec2_;
         rec2_ = {};
         std::size_t n = this->read_some(buffers);
-        if (!ec.failed() && rpos_ == rsize_)
+        if (!ec.failed() &&
+            n != asio::buffer_size(buffers))
             ec = asio::error::eof;
         return n;
     }
@@ -202,16 +206,11 @@ public:
         const MutableBufferSequence& buffers,
         Handler&& handler)
     {
-        auto ec = rec_;
-        rec_ = rec2_;
-        rec2_ = {};
-        std::size_t bytes_transferred = this->read_some(buffers);
+        error_code ec;
+        std::size_t n = read_some(buffers, ec);
         asio::post(
             get_executor(),
-            bind_handler(
-                std::move(handler),
-                ec,
-                bytes_transferred));
+            bind_handler(std::move(handler), ec, n));
     }
 
     // AsyncWriteStream
@@ -221,15 +220,10 @@ public:
         const ConstBufferSequence& buffers,
         Handler&& handler)
     {
-        auto ec = wec_;
-        wec_ = wec2_;
-        wec2_ = {};
-        std::size_t bytes_transferred = this->write_some(buffers);
+        error_code ec;
+        std::size_t n = write_some(buffers, ec);
         asio::post(get_executor(),
-            asio::detail::bind_handler(
-                std::move(handler),
-                ec,
-                bytes_transferred));
+            bind_handler(std::move(handler), ec, n));
     }
 
     void

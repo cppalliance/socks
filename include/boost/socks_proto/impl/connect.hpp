@@ -12,6 +12,7 @@
 
 #include <boost/socks_proto/detail/config.hpp>
 
+#include <boost/socks_proto/error.hpp>
 #include <boost/socks_proto/detail/auth_method.hpp>
 #include <boost/socks_proto/detail/address_type.hpp>
 #include <boost/socks_proto/detail/command.hpp>
@@ -24,8 +25,8 @@
 #include <boost/asio/write.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
-#include <boost/core/empty_value.hpp>
 #include <boost/core/allocator_access.hpp>
+#include <boost/core/empty_value.hpp>
 
 namespace boost {
 namespace socks_proto {
@@ -51,51 +52,19 @@ struct domain_endpoint
     }
 };
 
-// All these operations are repeatedly
-// implementing a pattern that should be
-// later encapsulated into
-// socks_proto::request
-// and socks_proto::reply
-template <class Allocator = std::allocator<unsigned char>>
-std::vector<unsigned char, Allocator>
-prepare_greeting(std::initializer_list<auth_method> il)
-{
-    BOOST_ASSERT(il.size() <= 255);
-    std::vector<unsigned char, Allocator> buffer(
-        2 + il.size());
+BOOST_SOCKS_PROTO_DECL
+std::size_t
+prepare_greeting(
+    unsigned char* buffer,
+    std::size_t n,
+    std::initializer_list<unsigned char> methods);
 
-    // VER
-    buffer[0] = static_cast<unsigned char>(
-        version::socks_5);
-
-    // NMETHODS
-    buffer[1] = static_cast<unsigned char>(
-        il.size());
-
-    // METHODS
-    auto it = il.begin();
-    std::size_t i = 2;
-    while (it != il.end())
-    {
-        buffer[i] = static_cast<unsigned char>(*it);
-        ++it;
-        ++i;
-    }
-
-    return buffer;
-}
-
-template <class Allocator = std::allocator<unsigned char>>
-std::vector<unsigned char, Allocator>
-prepare_greeting(auth::no_auth const &) {
-    return prepare_greeting({auth_method::no_authentication});
-}
-
-template <class Allocator = std::allocator<unsigned char>>
-std::vector<unsigned char, Allocator>
-prepare_greeting(auth::userpass const&) {
-    return prepare_greeting({auth_method::userpass});
-}
+BOOST_SOCKS_PROTO_DECL
+std::size_t
+prepare_greeting(
+    unsigned char* buffer,
+    std::size_t n,
+    auth_options const& opt);
 
 inline
 std::size_t
@@ -111,92 +80,36 @@ dst_addr_size(
     return 1 + target_host.domain.size();
 }
 
-inline
+BOOST_SOCKS_PROTO_DECL
+void
+write_ver_cmd_rsv(
+    unsigned char* buffer);
+
+BOOST_SOCKS_PROTO_DECL
 std::size_t
 write_target_host(
     unsigned char* buffer,
-    endpoint const& target_host) {
-    // ATYP
-    buffer[0] = static_cast<unsigned char>(
-        target_host.address().is_v6() ?
-            address_type::ip_v6 : address_type::ip_v4);
+    endpoint const& target_host);
 
-    // DST. ADDR
-    std::size_t i = 1;
-    if (target_host.address().is_v4())
-    {
-        auto ip_bytes =
-            target_host.address().to_v4().to_bytes();
-        for (auto b: ip_bytes)
-            buffer[i++] = b;
-    }
-    else
-    {
-        auto ip_bytes =
-            target_host.address().to_v6().to_bytes();
-        for (auto b: ip_bytes)
-            buffer[i++] = b;
-    }
-
-    // DSTPORT
-    std::uint16_t target_port = target_host.port();
-    buffer[i++] = target_port >> 8;
-    buffer[i++] = target_port & 0xFF;
-
-    return i;
-}
-
-inline
+BOOST_SOCKS_PROTO_DECL
 std::size_t
 write_target_host(
     unsigned char* buffer,
-    domain_endpoint_view const& target_host) {
-    // ATYP
-    buffer[0] = static_cast<unsigned char>(
-            address_type::domain_name);
+    domain_endpoint_view const& target_host);
 
-    // DST. ADDR
-    buffer[1] = static_cast<unsigned char>(
-        target_host.domain.size());
-    std::size_t i = 2;
-    for (auto b: target_host.domain)
-        buffer[i++] = static_cast<unsigned char>(b);
+BOOST_SOCKS_PROTO_DECL
+std::size_t
+prepare_request(
+    unsigned char* buffer,
+    std::size_t n,
+    endpoint const& target_host);
 
-    // DSTPORT
-    std::uint16_t target_port = target_host.port;
-    buffer[i++] = target_port >> 8;
-    buffer[i++] = target_port & 0xFF;
-
-    return i;
-}
-
-template <class Endpoint, class Allocator = std::allocator<unsigned char>>
-std::vector<unsigned char, Allocator>
-prepare_request_v5(
-    Endpoint const& target_host,
-    Allocator const& a = {})
-{
-    std::size_t n_dst_addr = dst_addr_size(target_host);
-    std::vector<unsigned char, Allocator> buffer(
-        6 + n_dst_addr, 0x00, a);
-
-    // Prepare a CONNECT request
-    // VER
-    buffer[0] = static_cast<unsigned char>(
-        version::socks_5);
-
-    // CMD
-    buffer[1] = static_cast<unsigned char>(
-        command::connect);
-
-    // RSV
-    buffer[2] = 0x00;
-
-    // ATYP + DST. ADDR + DSTPORT
-    write_target_host(&buffer[3], target_host);
-
-    return buffer;
-}
+BOOST_SOCKS_PROTO_DECL
+std::size_t
+prepare_request(
+    unsigned char* buffer,
+    std::size_t n,
+    domain_endpoint_view const& target_host);
 
 BOOST_SOCKS_PROTO_DECL
 endpoint
@@ -205,76 +118,154 @@ parse_reply_v5(
     std::size_t n,
     error_code& ec);
 
-template <class SyncStream, class EndpointV5, class AuthOptions>
-endpoint
-connect_any(
+BOOST_SOCKS_PROTO_DECL
+void
+validate_server_choice(
+    unsigned char const* buffer,
+    std::size_t n,
+    unsigned char code,
+    error_code& ec);
+
+BOOST_SOCKS_PROTO_DECL
+void
+validate_server_choice(
+    unsigned char const* buffer,
+    std::size_t n,
+    auth_options const& opt,
+    error_code& ec);
+
+// authenticate and return server choice
+template <class SyncStream>
+unsigned char
+authenticate(
     SyncStream& stream,
-    EndpointV5&& target_host, // tcp::endpoint or pair<domain, port>
-    AuthOptions opt,
+    unsigned char* buffer,
+    std::size_t n,
+    auth_options const& opt,
     error_code& ec)
 {
-    // All these functions are repeatedly
-    // implementing a pattern that should be
-    // encapsulated into socks_proto::request
-    // and socks_proto::reply in the future
-
     // Send a GREETING request
     // Create a list with only opt as a method
     // accepted by the client
-    std::vector<unsigned char> buffer =
-        detail::prepare_greeting(opt);
-    BOOST_ASSERT(buffer.size() > 2);
-    unsigned char auth_code = buffer[2];
+    n = prepare_greeting(buffer, n, opt);
+    BOOST_ASSERT(n > 2);
     asio::write(
         stream,
-        asio::buffer(buffer),
+        asio::buffer(buffer, n),
         ec);
     if (ec.failed())
-        return endpoint{};
+        return 0;
 
-    // Read GREETING reply
-    buffer.resize(2);
-    std::size_t n = asio::read(
+    // Read GREETING reply (or "server choice")
+    n = asio::read(
         stream,
-        asio::buffer(buffer),
+        asio::buffer(buffer, 2),
         ec);
-    if (ec.failed() && ec != asio::error::eof)
-        return endpoint{};
-    if (n < 2 ||
-        buffer[0] != 0x05 ||
-        buffer[1] != auth_code)
-    {
-        ec = asio::error::no_protocol_option;
-        return endpoint{};
-    }
+    validate_server_choice(buffer, n, opt, ec);
 
     // AFREITAS Implement sync sub-negotiation
     // This is ignoring the server methods
 
-    // Send a CONNECT request
-    buffer = detail::prepare_request_v5(target_host);
-    asio::write(
-        stream,
-        asio::buffer(buffer),
-        ec);
-    if (ec.failed())
-        return endpoint{};
-
-    // Read the CONNECT reply
-    buffer.resize(22);
-    n = asio::read(
-        stream,
-        asio::buffer(buffer),
-        ec);
-    if (ec.failed() && ec != asio::error::eof)
-        return endpoint{};
-
-    buffer.resize(n);
-    return detail::parse_reply_v5(
-        buffer.data(), buffer.size(), ec);
+    return buffer[1];
 }
 
-template <class Stream, class Endpoint, class AuthOptions, class Allocator>
+template <class SyncStream>
+std::size_t
+write_connect_request(
+    SyncStream& stream,
+    unsigned char* buffer,
+    std::size_t n,
+    endpoint const& target_host,
+    error_code& ec)
+{
+    // Send a CONNECT request
+    n = detail::prepare_request(
+        buffer, n, target_host);
+    asio::write(
+        stream,
+        asio::buffer(buffer, n),
+        ec);
+    return n;
+}
+
+template <class SyncStream>
+std::size_t
+write_connect_request(
+    SyncStream& stream,
+    unsigned char* buffer,
+    std::size_t n,
+    domain_endpoint_view const& target_host,
+    error_code& ec)
+{
+    // Send a CONNECT request
+    n = detail::prepare_request(
+        buffer, n, target_host);
+    asio::write(
+        stream,
+        asio::buffer(buffer, n),
+        ec);
+    return n;
+}
+
+struct read_reply_cond {
+    std::size_t operator()(
+        const error_code& ec,
+        std::size_t n)
+    {
+        // max size = 22 because reply should not
+        // contain domain name in BND.ADDR
+        // min size = 10, when BND.ADDR is ipv4
+        if (ec.failed())
+            return 0;
+        if (n == 10 &&
+            to_address_type(buf[3]) == address_type::ip_v4)
+        {
+            return 0;
+        }
+        return 22 - n;
+    }
+
+    unsigned char* buf;
+};
+
+
+template <class SyncStream>
+endpoint
+read_connect_reply(
+    SyncStream& stream,
+    unsigned char* buffer,
+    std::size_t n,
+    error_code& ec)
+{
+    // Read the CONNECT reply
+    n = asio::read(
+        stream,
+        asio::buffer(buffer, 22),
+        read_reply_cond{buffer},
+        ec);
+    if (ec.failed() &&
+        ec != asio::error::eof)
+    {
+        // asio::error::eof indicates there was
+        // a SOCKS error and the server
+        // closed the connection cleanly.
+        // This should happen whenever
+        // the reply code is not "succeeded".
+        // We still want to parse the response
+        // to find out what kind of error.
+        return {};
+    }
+    if (n != 10 &&
+        n != 22)
+    {
+        ec = error::bad_reply_size;
+        return {};
+    }
+
+    return detail::parse_reply_v5(buffer, n, ec);
+}
+
+template <class Stream, class Endpoint, class Allocator>
 class connect_op
     : private empty_value<Allocator, 0>
 {
@@ -282,17 +273,14 @@ public:
     connect_op(
         Stream& s,
         Endpoint target_host,
-        AuthOptions opt,
+        auth_options opt,
         Allocator const& a)
         : empty_value<Allocator, 0>(empty_init, a)
         , s_(s)
-        , buf_(prepare_greeting(opt))
+        , buf_(263, 0x00, a)
         , target_(target_host)
-        // , opt_(opt)
-    {
-        BOOST_ASSERT(buf_.size() > 2);
-        auth_code_ = buf_[2];
-    }
+        , opt_(std::move(opt))
+    {}
 
     template <typename Self>
     void
@@ -305,81 +293,82 @@ public:
         BOOST_ASIO_CORO_REENTER(coro_)
         {
             // Send a GREETING request
+            n = prepare_greeting(
+                buf_.data(), buf_.size(), opt_);
+            BOOST_ASSERT(n > 2);
             BOOST_ASIO_HANDLER_LOCATION((
                 __FILE__, __LINE__,
                 "asio::async_write"));
             BOOST_ASIO_CORO_YIELD
             asio::async_write(
                 s_,
-                asio::buffer(buf_),
+                asio::buffer(buf_, n),
                 std::move(self));
-
-            // Read GREETING reply
             if (ec.failed())
                 goto complete;
-            BOOST_ASSERT(buf_.capacity() >= 2);
-            buf_.resize(2);
+
+            // Read GREETING reply
             BOOST_ASIO_HANDLER_LOCATION((
                 __FILE__, __LINE__,
                 "asio::async_read"));
             BOOST_ASIO_CORO_YIELD
             asio::async_read(
                 s_,
-                asio::buffer(buf_.data(), buf_.size()),
+                asio::buffer(buf_.data(), 2),
                 std::move(self));
+            validate_server_choice(
+                buf_.data(), n, opt_, ec);
+            if (ec.failed())
+                goto complete;
 
             // AFREITAS Implement sub-negotiation
             // This is ignoring the server method
 
             // Send the CONNECT request
-            if (ec.failed() && ec != asio::error::eof)
-                goto complete;
-            if (n < 2 ||
-                buf_[0] != 0x05 ||
-                buf_[1] != auth_code_)
-            {
-                ec = asio::error::no_protocol_option;
-                goto complete;
-            }
-            buf_ =
-                prepare_request_v5(target_, this->get());
+            n = prepare_request(
+                buf_.data(), buf_.size(), target_);
             BOOST_ASIO_HANDLER_LOCATION((
                 __FILE__, __LINE__,
                 "asio::async_write"));
             BOOST_ASIO_CORO_YIELD
             asio::async_write(
                 s_,
-                asio::buffer(buf_),
+                asio::buffer(buf_.data(), n),
                 std::move(self));
-
-            // Read the CONNECT reply
             if (ec.failed())
                 goto complete;
-            buf_.resize(22);
+
+            // Read the CONNECT reply
             BOOST_ASIO_HANDLER_LOCATION((
                 __FILE__, __LINE__,
                 "asio::async_read"));
             BOOST_ASIO_CORO_YIELD
             asio::async_read(
                 s_,
-                asio::buffer(buf_),
+                asio::buffer(buf_.data(), 22),
+                read_reply_cond{buf_.data()},
                 std::move(self)
             );
-            // Handle successful CONNECT reply
-            // Parse the CONNECT reply
-            if (ec.failed() && ec != asio::error::eof)
+            if (ec.failed() &&
+                ec != asio::error::eof)
             {
                 // asio::error::eof indicates there was
                 // a SOCKS error and the server
-                // closed the connection cleanly
-                // we still want to parse the response
+                // closed the connection cleanly.
+                // This should happen whenever
+                // the reply code is not "succeeded".
+                // We still want to parse the response
                 // to find out what kind of error
+                // this is.
                 goto complete;
             }
-            BOOST_ASSERT(buf_.capacity() >= n);
-            buf_.resize(n);
-            ep = parse_reply_v5(
-                buf_.data(), buf_.size(), ec);
+            if (n != 10 &&
+                n != 22)
+            {
+                ec = error::bad_reply_size;
+                goto complete;
+            }
+            ep = parse_reply_v5(buf_.data(), n, ec);
         complete:
             {
                 // Free memory before invoking the handler
@@ -392,13 +381,12 @@ public:
 private:
     Stream& s_;
     std::vector<unsigned char, Allocator> buf_;
-    unsigned char auth_code_ = 0x00;
     Endpoint target_;
-    // AuthOptions opt_;
+    auth_options const opt_;
     asio::coroutine coro_;
 };
 
-template <class AsyncStream, class Endpoint, class AuthOptions, class CompletionToken>
+template <class AsyncStream, class Endpoint, class CompletionToken>
 typename asio::async_result<
     typename asio::decay<CompletionToken>::type,
     void (error_code, endpoint)
@@ -406,7 +394,7 @@ typename asio::async_result<
 async_connect_any(
     AsyncStream& s,
     Endpoint const& target_host,
-    AuthOptions opt,
+    auth_options const& opt,
     CompletionToken&& token)
 {
     using DecayedToken =
@@ -424,7 +412,7 @@ async_connect_any(
         (
             // implementation of the composed asynchronous operation
             detail::connect_op<
-                AsyncStream, Endpoint, AuthOptions, allocator_type>{
+                AsyncStream, Endpoint, allocator_type>{
                 s,
                 target_host,
                 opt,
@@ -443,35 +431,58 @@ async_connect_any(
 // These functions are implementing what should
 // be encapsulated into socks_proto::request
 // in the future.
-template <class SyncStream, class AuthOptions>
+template <class SyncStream>
 endpoint
 connect(
     SyncStream& stream,
     endpoint const& target_host,
-    AuthOptions opt,
+    auth_options const& opt,
     error_code& ec)
 {
-    return detail::connect_any(
-        stream, target_host, opt, ec);
+    unsigned char buffer[263];
+    detail::authenticate(
+        stream, buffer, 263, opt, ec);
+    if (ec.failed())
+        return {};
+
+    detail::write_connect_request(
+        stream, buffer, 263, target_host, ec);
+    if (ec.failed())
+        return {};
+
+    auto ep = detail::read_connect_reply(
+        stream, buffer, 263, ec);
+    return ep;
 }
 
-template <class SyncStream, class AuthOptions>
+template <class SyncStream>
 endpoint
 connect(
     SyncStream& stream,
     string_view target_host,
     std::uint16_t target_port,
-    AuthOptions opt,
+    auth_options const& opt,
     error_code& ec)
 {
-    detail::domain_endpoint_view ep;
-    ep.domain = target_host;
-    ep.port = target_port;
-    return detail::connect_any(
-        stream,
-        ep,
-        opt,
-        ec);
+    unsigned char buffer[263];
+    detail::authenticate(
+        stream, buffer, 263, opt, ec);
+    if (ec.failed())
+        return {};
+
+    detail::domain_endpoint_view target;
+    target.domain = target_host;
+    target.port = target_port;
+    detail::write_connect_request(
+        stream, buffer, 263, target, ec);
+    if (ec.failed())
+        return {};
+
+    auto ep = detail::read_connect_reply(
+        stream, buffer, 263, ec);
+    if (ec.failed())
+        return {};
+    return ep;
 }
 
 // SOCKS4 connect initiating function
@@ -485,7 +496,7 @@ BOOST_SOCKS_PROTO_ASYNC_ENDPOINT(CompletionToken)
 async_connect(
     AsyncStream& s,
     endpoint const& target_host,
-    AuthOptions opt,
+    auth_options const& opt,
     CompletionToken&& token)
 {
     return detail::async_connect_any(
@@ -498,7 +509,7 @@ async_connect(
     AsyncStream& s,
     string_view app_domain,
     std::uint16_t app_port,
-    AuthOptions opt,
+    auth_options const& opt,
     CompletionToken&& token)
 {
     detail::domain_endpoint ep;

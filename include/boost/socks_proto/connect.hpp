@@ -10,13 +10,13 @@
 #ifndef BOOST_SOCKS_PROTO_CONNECT_V5_HPP
 #define BOOST_SOCKS_PROTO_CONNECT_V5_HPP
 
-#include <boost/socks_proto/detail/config.hpp>
-#include <boost/socks_proto/endpoint.hpp>
-#include <boost/socks_proto/auth.hpp>
-#include <boost/socks_proto/string_view.hpp>
-#include <boost/socks_proto/error.hpp>
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/socks_proto/auth_options.hpp>
+#include <boost/socks_proto/detail/config.hpp>
+#include <boost/socks_proto/endpoint.hpp>
+#include <boost/socks_proto/error.hpp>
+#include <boost/socks_proto/string_view.hpp>
 
 namespace boost {
 namespace socks_proto {
@@ -39,7 +39,7 @@ namespace socks_proto {
     @par Example
     @code
     boost::asio::connect(s, resolver.resolve(socks_host, socks_service));
-    socks_proto::io::auth::no_auth opt{};
+    socks_proto::io::auth::none opt{};
     socks_proto::io::connect(s, app_host_endpoint, opt, ec);
     @endcode
 
@@ -54,12 +54,12 @@ namespace socks_proto {
     @li <a href="https://www.openssh.com/txt/socks4.protocol">
         SOCKS: A protocol for TCP proxy across firewalls</a>
 */
-template <class SyncStream, class AuthOptions>
+template <class SyncStream>
 endpoint
 connect(
     SyncStream& s,
     endpoint const& ep,
-    AuthOptions opt,
+    auth_options const& opt,
     error_code& ec);
 
 /** Connect to the application server through a SOCKS5 server
@@ -99,13 +99,13 @@ connect(
     @li <a href="https://www.openssh.com/txt/socks4.protocol">
         SOCKS: A protocol for TCP proxy across firewalls</a>
 */
-template <class SyncStream, class AuthOptions>
+template <class SyncStream>
 endpoint
 connect(
     SyncStream& s,
     string_view app_domain,
     std::uint16_t app_port,
-    AuthOptions opt,
+    auth_options const& opt,
     error_code& ec);
 
 /** Asynchronously connect to the application server through a SOCKS5 server
@@ -157,7 +157,7 @@ BOOST_SOCKS_PROTO_ASYNC_ENDPOINT(CompletionToken)
 async_connect(
     AsyncStream& s,
     endpoint const& ep,
-    AuthOptions opt,
+    auth_options const& opt,
     CompletionToken&& token);
 
 /** Asynchronously connect to the application server through a SOCKS5 server
@@ -216,7 +216,7 @@ async_connect(
     AsyncStream& s,
     string_view app_domain,
     std::uint16_t app_port,
-    AuthOptions opt,
+    auth_options const& opt,
     CompletionToken&& token);
 
 } // socks_proto

@@ -8,13 +8,13 @@ cmake_minimum_required(VERSION 3.5...3.16)
 project(cmake_subdir_test LANGUAGES CXX)
 
 if(BOOST_CI_INSTALL_TEST)
-    find_package(boost_socks_proto REQUIRED)
+    find_package(boost_socks REQUIRED)
 else()
     add_subdirectory(../../../.. _deps/boost EXCLUDE_FROM_ALL)
 endif()
 
 add_executable(main main.cpp)
-target_link_libraries(main Boost::socks_proto)
+target_link_libraries(main Boost::socks)
 
 enable_testing()
 add_test(NAME main COMMAND main)

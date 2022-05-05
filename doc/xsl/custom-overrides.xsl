@@ -4,8 +4,8 @@
   exclude-result-prefixes="xs"
   expand-text="yes">
 
-  <xsl:variable name="doc-ref" select="'socks_proto.ref'"/>
-  <xsl:variable name="doc-ns" select="'boost::socks_proto'"/>
+  <xsl:variable name="doc-ref" select="'socks.ref'"/>
+  <xsl:variable name="doc-ns" select="'boost::socks'"/>
   <xsl:variable name="include-private-members" select="false()"/>
 
   <xsl:template mode="includes-template-footer" match="location">
@@ -19,7 +19,7 @@
     </xsl:if>
   </xsl:template>
 
-  <xsl:template mode="convenience-header" match="@file[contains(., 'boost/socks_proto')]">socks_proto.hpp</xsl:template>
+  <xsl:template mode="convenience-header" match="@file[contains(., 'boost/socks')]">socks.hpp</xsl:template>
   <xsl:template mode="convenience-header" match="@file"/>
 
   <xsl:variable name="emphasized-template-parameter-types" select="

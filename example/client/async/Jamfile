@@ -9,8 +9,8 @@
 
 exe socks-client-v4-async :
     socks_client_async.cpp
-    /boost/socks_proto//boost_socks_proto
-    /boost/socks_proto//socks_proto_sources
+    /boost/socks//boost_socks
+    /boost/socks//socks_sources
     /boost/url//boost_url
     :
     <variant>coverage:<build>no

@@ -8,7 +8,7 @@
 # Official repository: https://github.com/alandefreitas/socks_proto
 #
 
-project socks_proto/doc ;
+project socks/doc ;
 
 import boostbook ;
 import os ;
@@ -21,9 +21,9 @@ path-constant out : . ;
 docca.reference reference.qbk
     :
         xsl/custom-overrides.xsl
-        [ glob-tree-ex ../include/boost/socks_proto : *.hpp *.ipp : detail impl ]
+        [ glob-tree-ex ../include/boost/socks : *.hpp *.ipp : detail impl ]
     :
-        <doxygen:param>PROJECT_NAME=SOCKS_PROTO
+        <doxygen:param>PROJECT_NAME=SOCKS
         <doxygen:param>PROJECT_BRIEF="SOCKS Protocol Library"
         <doxygen:param>ALIASES="esafe=\"@par Exception Safety\""
         <doxygen:param>FILE_PATTERNS=
@@ -33,15 +33,15 @@ docca.reference reference.qbk
         <doxygen:param>EXPAND_ONLY_PREDEF=YES
         <doxygen:param>"PREDEFINED=\\
             BOOST_SYMBOL_VISIBLE \\
-            BOOST_SOCKS_PROTO_DOCS \\
-            BOOST_SOCKS_PROTO_DECL \\
-            BOOST_SOCKS_PROTO_PUBLIC \\
-            BOOST_SOCKS_PROTO_FORCEINLINE \\
-            \"BOOST_SOCKS_PROTO_NODISCARD=[[nodiscard]]\" \\
-            \"BOOST_SOCKS_PROTO_DEDUCED=__deduced__\" \\
-            \"BOOST_SOCKS_PROTO_ASYNC_ENDPOINT(type)=__deduced__\" \\
+            BOOST_SOCKS_DOCS \\
+            BOOST_SOCKS_DECL \\
+            BOOST_SOCKS_PUBLIC \\
+            BOOST_SOCKS_FORCEINLINE \\
+            \"BOOST_SOCKS_NODISCARD=[[nodiscard]]\" \\
+            \"BOOST_SOCKS_DEDUCED=__deduced__\" \\
+            \"BOOST_SOCKS_ASYNC_ENDPOINT(type)=__deduced__\" \\
             \"BOOST_STATIC_ASSERT(x)=\" \\
-            \"BOOST_SOCKS_PROTO_INLINE_VARIABLE(v, t)=constexpr t v;\""
+            \"BOOST_SOCKS_INLINE_VARIABLE(v, t)=constexpr t v;\""
         <doxygen:param>ABBREVIATE_BRIEF=
         <doxygen:param>INLINE_INHERITED_MEMB=YES
         <doxygen:param>JAVADOC_AUTOBRIEF=YES
@@ -83,12 +83,12 @@ install images
     :
         [ glob images/*.png ]
     :
-        <location>html/socks_proto/images
+        <location>html/socks/images
     ;
 
 explicit images ;
 
-xml socks_proto_doc
+xml socks_doc
     :
         qbk/main.qbk
     :
@@ -97,7 +97,7 @@ xml socks_proto_doc
         # <include>$(broot)/tools/boostbook/dtd
     ;
 
-explicit socks_proto_doc ;
+explicit socks_doc ;
 
 install treeimages
     :
@@ -115,14 +115,14 @@ explicit treeimages ;
 #
 #-------------------------------------------------------------------------------
 
-boostbook socks_proto
+boostbook socks
     :
-        socks_proto_doc
+        socks_doc
     :
         <xsl:param>boost.root=../../../..
         <xsl:param>nav.layout=none
         <xsl:param>boost.image.src=images/doc-logo.png
-        <xsl:param>boost.image.alt="Boost.Socks.Proto Logo"
+        <xsl:param>boost.image.alt="Boost.Socks Logo"
         <xsl:param>boost.image.w=277
         <xsl:param>boost.image.h=86
         <xsl:param>boost.graphics.root=images/
@@ -150,5 +150,5 @@ boostbook socks_proto
 alias boostdoc ;
 explicit boostdoc ;
 
-alias boostrelease : socks_proto ;
+alias boostrelease : socks ;
 explicit boostrelease ;

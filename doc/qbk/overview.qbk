@@ -12,7 +12,7 @@
 
 [/-----------------------------------------------------------------------------]
 
-Boost.Socks.Proto is a portable, low-level C++ library which provides containers
+Boost.Socks is a portable, low-level C++ library which provides containers
 and algorithms for implementing the SOCKS protocol described in the documents
 [@https://datatracker.ietf.org/doc/html/rfc1928 SOCKS Protocol Version 5],
 henceforth referred to as __rfc1928__, __socks4__, __socks4a__, and the extensions
@@ -25,7 +25,7 @@ otherwise blocked, or to provide similar functionality to a virtual private
 network. The SOCKS5 protocol also provides authentication for this network
 traversal in __rfc1928__.
 
-Boost.Socks.Proto offers these features:
+Boost.Socks offers these features:
 
 * Require only C++11
 * Works without exceptions
@@ -46,22 +46,22 @@ The library requires Boost and a compiler supporting at least C++11. Aliases for
 [#header-only]
 [heading Header-Only]
 
-To use Boost.Socks.Proto as header-only; that is, to eliminate the requirement to link a program to a static or dynamic
-Boost.Socks.Proto library, place the following line in [*exactly one] new or existing source file in your project.
+To use Boost.Socks as header-only; that is, to eliminate the requirement to link a program to a static or dynamic
+Boost.Socks library, place the following line in [*exactly one] new or existing source file in your project.
 
 [c++]
 ```
-    #include <boost/socks_proto/src.hpp>
+    #include <boost/socks/src.hpp>
 ```
 
 [note
-    This "header-only" configuration needs `BOOST_SOCKS_PROTO_NO_LIB` defined when building with compilers supporting
+    This "header-only" configuration needs `BOOST_SOCKS_NO_LIB` defined when building with compilers supporting
     auto-linking, such as Microsoft Visual C++. This macro will instruct Boost to deactivate auto-linking:
 
     [c++]
     ```
-        #define BOOST_SOCKS_PROTO_NO_LIB
-        #include <boost/socks_proto.hpp>
+        #define BOOST_SOCKS_NO_LIB
+        #include <boost/socks.hpp>
     ```
 ]
 
@@ -78,7 +78,7 @@ is designed to work without exceptions if desired.
 
 [section Supported Compilers]
 
-Boost.Socks.Proto has been tested with the following compilers:
+Boost.Socks is regularly tested with the following compilers:
 
 * clang: 3.8, 4, 5, 6, 7, 8, 9, 10, 11, 12
 * gcc: 4.8, 4.9, 5, 6, 7, 8, 9, 10, 11

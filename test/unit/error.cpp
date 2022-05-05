@@ -9,12 +9,12 @@
 //
 
 // Test that header file is self-contained.
-#include <boost/socks_proto/error.hpp>
+#include <boost/socks/error.hpp>
 #include <memory>
 #include "test_suite.hpp"
 
 namespace boost {
-namespace socks_proto {
+namespace socks {
 
 class error_test
 {
@@ -74,7 +74,7 @@ public:
     }
 };
 
-TEST_SUITE(error_test, "boost.socks_proto.error");
+TEST_SUITE(error_test, "boost.socks.error");
 
-} // socks_proto
+} // socks
 } // boost

@@ -24,11 +24,11 @@ local SOURCES =
     connect_v4.cpp
     endpoint.cpp
     error.cpp
-    socks_proto.cpp
+    socks.cpp
     string_view.cpp
     ;
 
 for local f in $(SOURCES)
 {
-    run $(f) /boost/socks_proto//boost_socks_proto ;
+    run $(f) /boost/socks//boost_socks ;
 }

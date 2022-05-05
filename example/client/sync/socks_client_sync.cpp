@@ -5,8 +5,8 @@
 // https://www.boost.org/LICENSE_1_0.txt
 //
 
-#include <boost/socks_proto/connect.hpp>
-#include <boost/socks_proto/connect_v4.hpp>
+#include <boost/socks/connect.hpp>
+#include <boost/socks/connect_v4.hpp>
 
 #include <boost/url/url_view.hpp>
 
@@ -24,7 +24,7 @@
 #include <iostream>
 #include <string>
 
-namespace socks = boost::socks_proto;
+namespace socks = boost::socks;
 namespace urls = boost::urls;
 namespace beast = boost::beast;
 namespace http = beast::http;

@@ -8,4 +8,4 @@
 // Official repository: https://github.com/alandefreitas/socks_proto
 //
 
-#include <boost/socks_proto/src.hpp>
+#include <boost/socks/src.hpp>

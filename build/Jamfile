@@ -15,12 +15,12 @@ lib mswsock ; # NT
 lib ipv6 ; # HPUX
 lib network ; # HAIKU
 
-project boost/socks_proto
+project boost/socks
     : requirements
       $(c11-requires)
-        <link>shared:<define>BOOST_SOCKS_PROTO_DYN_LINK=1
-        <link>static:<define>BOOST_SOCKS_PROTO_STATIC_LINK=1
-        <define>BOOST_SOCKS_PROTO_SOURCE
+        <link>shared:<define>BOOST_SOCKS_DYN_LINK=1
+        <link>static:<define>BOOST_SOCKS_STATIC_LINK=1
+        <define>BOOST_SOCKS_SOURCE
         <target-os>solaris:<library>socket
         <target-os>solaris:<library>nsl
         <target-os>windows:<define>_WIN32_WINNT=0x0601
@@ -33,8 +33,8 @@ project boost/socks_proto
         <target-os>hpux:<library>ipv6
         <target-os>haiku:<library>network
     : usage-requirements
-        <link>shared:<define>BOOST_SOCKS_PROTO_DYN_LINK=1
-        <link>static:<define>BOOST_SOCKS_PROTO_STATIC_LINK=1
+        <link>shared:<define>BOOST_SOCKS_DYN_LINK=1
+        <link>static:<define>BOOST_SOCKS_STATIC_LINK=1
         <target-os>solaris:<library>socket
         <target-os>solaris:<library>nsl
         <target-os>windows:<define>_WIN32_WINNT=0x0601
@@ -49,14 +49,14 @@ project boost/socks_proto
     : source-location ../src
     ;
 
-alias socks_proto_sources
+alias socks_sources
    : src.cpp
    ;
 
-explicit socks_proto_sources ;
+explicit socks_sources ;
 
-lib boost_socks_proto
-   : socks_proto_sources
+lib boost_socks
+   : socks_sources
    ;
 
-boost-install boost_socks_proto ;
+boost-install boost_socks ;

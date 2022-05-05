@@ -15,6 +15,6 @@ target_link_libraries(socks-client-async
         Boost::asio
         Boost::beast
         Boost::url
-        Boost::socks_proto)
+        Boost::socks)
 
 set_property(TARGET socks-client-async PROPERTY FOLDER "example-socks-client-async")

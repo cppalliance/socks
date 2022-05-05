@@ -8,12 +8,12 @@
 // Official repository: https://github.com/alandefreitas/socks_proto
 //
 
-#include <boost/socks_proto.hpp>
+#include <boost/socks.hpp>
 
 #include "test_suite.hpp"
 
 namespace boost {
-namespace socks_proto {
+namespace socks {
 
 class limits_test
 {
@@ -32,7 +32,7 @@ public:
 
 TEST_SUITE(
     limits_test,
-    "boost.socks_proto.limits");
+    "boost.socks.limits");
 
-} // socks_proto
+} // socks
 } // boost

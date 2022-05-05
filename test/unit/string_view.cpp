@@ -9,4 +9,4 @@
 //
 
 // Test that header file is self-contained.
-#include <boost/socks_proto/string_view.hpp>
+#include <boost/socks/string_view.hpp>

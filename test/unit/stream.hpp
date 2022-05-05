@@ -5,15 +5,15 @@
 // https://www.boost.org/LICENSE_1_0.txt
 //
 
-#ifndef  BOOST_SOCKS_PROTO_TEST_UNIT_STREAM_HPP
-#define  BOOST_SOCKS_PROTO_TEST_UNIT_STREAM_HPP
+#ifndef  BOOST_SOCKS_TEST_UNIT_STREAM_HPP
+#define  BOOST_SOCKS_TEST_UNIT_STREAM_HPP
 
 #include <boost/asio/io_context.hpp>
-#include <boost/socks_proto/error.hpp>
+#include <boost/socks/error.hpp>
 #include <tuple>
 
 namespace boost {
-namespace socks_proto {
+namespace socks {
 namespace test {
 namespace detail {
 template <class T, T... Ints>
@@ -436,7 +436,7 @@ private:
     error_code wec2_{};
 };
 } // test
-} // socks_proto
+} // socks
 } // boost
 
-#endif // BOOST_SOCKS_PROTO_TEST_UNIT_STREAM_HPP
+#endif // BOOST_SOCKS_TEST_UNIT_STREAM_HPP

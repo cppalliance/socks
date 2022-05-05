@@ -1,8 +1,8 @@
-# Boost.Socks.Proto
+# Boost.Socks
 
 > SOCKS parsing and serialization algorithms using C++11
 
-Boost.Socks.Proto is a portable, low-level C++ library which provides containers and algorithms for implementing the
+Boost.Socks is a portable, low-level C++ library which provides containers and algorithms for implementing the
 SOCKS protocol described in the document
 [RFC1928: SOCKS Protocol Version 5](https://datatracker.ietf.org/doc/html/rfc1928), and extensions described
 in [RFC1929](https://datatracker.ietf.org/doc/html/rfc1929),
@@ -20,7 +20,7 @@ Branch          | GH Actions                                                    
 
 ## Properties
 
-Boost.Socks.Proto offers these features:
+Boost.Socks offers these features:
 
 * Require only C++11
 * Works without exceptions
@@ -37,19 +37,19 @@ Boost.Socks.Proto offers these features:
 ### Header-Only
 
 To use the library as header-only; that is, to eliminate the requirement to link a program to a static or dynamic
-Boost.Socks.Proto library, simply place the following line in exactly one new or existing source file in your project.
+Boost.Socks library, simply place the following line in exactly one new or existing source file in your project.
 
 ```cpp
-    #include <boost/socks_proto/src.hpp>
+    #include <boost/socks/src.hpp>
 ```
 
 ### Embedded
 
-Boost.Socks.Proto works great on embedded devices. It is designed to work without exceptions if desired.
+Boost.Socks works great on embedded devices. It is designed to work without exceptions if desired.
 
 ### Supported Compilers
 
-Boost.Socks.Proto has been tested with the following compilers:
+Boost.Socks has been tested with the following compilers:
 
 * clang: 3.8, 4, 5, 6, 7, 8, 9, 10, 11, 12
 * gcc: 4.8, 4.9, 5, 6, 7, 8, 9, 10, 11

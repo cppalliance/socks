@@ -1,6 +1,6 @@
 {
-  "key": "socks_proto",
-  "name": "Socks.Proto",
+  "key": "socks",
+  "name": "Socks",
   "authors": [ "Alan de Freitas" ],
   "maintainers": [ "Alan de Freitas <alandefreitas@gmail.com>" ],
   "description": "SOCKS parsing and serialization algorithms using C++11.",

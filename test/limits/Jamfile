@@ -18,9 +18,9 @@ project
       <include>../../extra/include
     ;
 
-run limits.cpp ../../extra/test_main.cpp /boost/socks_proto//socks_proto_sources
+run limits.cpp ../../extra/test_main.cpp /boost/socks//socks_sources
     : requirements
-        <define>BOOST_SOCKS_PROTO_MAX_HEADER=20
-        <define>BOOST_SOCKS_PROTO_NO_LIB
-        <define>BOOST_SOCKS_PROTO_STATIC_LINK
+        <define>BOOST_SOCKS_MAX_HEADER=20
+        <define>BOOST_SOCKS_NO_LIB
+        <define>BOOST_SOCKS_STATIC_LINK
     ;

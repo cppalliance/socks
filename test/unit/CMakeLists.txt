@@ -19,13 +19,13 @@ set(PFILES
     connect_v4.cpp
     endpoint.cpp
     error.cpp
-    socks_proto.cpp
+    socks.cpp
     string_view.cpp
     )
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "" FILES ${PFILES})
 source_group("_extra" FILES ${EXTRAFILES})
-add_executable(boost_socks_proto_tests ${PFILES} ${EXTRAFILES})
-target_include_directories(boost_socks_proto_tests PRIVATE . ../../extra/include)
-target_link_libraries(boost_socks_proto_tests PRIVATE Boost::socks_proto)
-add_test(NAME boost_socks_proto_tests COMMAND boost_socks_proto_tests)
+add_executable(boost_socks_tests ${PFILES} ${EXTRAFILES})
+target_include_directories(boost_socks_tests PRIVATE . ../../extra/include)
+target_link_libraries(boost_socks_tests PRIVATE Boost::socks)
+add_test(NAME boost_socks_tests COMMAND boost_socks_tests)

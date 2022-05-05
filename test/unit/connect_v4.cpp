@@ -9,14 +9,14 @@
 //
 
 // Test that header file is self-contained.
-#include <boost/socks_proto/connect_v4.hpp>
-#include <boost/socks_proto/detail/reply_code_v4.hpp>
+#include <boost/socks/connect_v4.hpp>
+#include <boost/socks/detail/reply_code_v4.hpp>
 #include "test_suite.hpp"
 #include "stream.hpp"
 #include <array>
 
 namespace boost {
-namespace socks_proto {
+namespace socks {
 
 class io_connect_v4_test
 {
@@ -320,7 +320,7 @@ public:
 
 TEST_SUITE(
     io_connect_v4_test,
-    "boost.socks_proto.io.connect_v4");
+    "boost.socks.io.connect_v4");
 
-} // socks_proto
+} // socks
 } // boost

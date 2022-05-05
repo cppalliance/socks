@@ -10,35 +10,35 @@
 
 cmake_minimum_required(VERSION 3.8...3.16)
 
-set(BOOST_SOCKS_PROTO_VERSION 1)
+set(BOOST_SOCKS_VERSION 1)
 if(BOOST_SUPERPROJECT_VERSION)
-    set(BOOST_SOCKS_PROTO_VERSION ${BOOST_SUPERPROJECT_VERSION})
+    set(BOOST_SOCKS_VERSION ${BOOST_SUPERPROJECT_VERSION})
 endif()
 
-project(boost_socks_proto VERSION "${BOOST_SOCKS_PROTO_VERSION}" LANGUAGES CXX)
+project(boost_socks VERSION "${BOOST_SOCKS_VERSION}" LANGUAGES CXX)
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     include(CTest)
-    option(BOOST_SOCKS_PROTO_BUILD_TESTS "Build boost::socks_proto tests" ${BUILD_TESTING})
-    option(BOOST_SOCKS_PROTO_BUILD_EXAMPLES "Build boost::socks_proto examples" ON)
-    set(BOOST_SOCKS_PROTO_IS_ROOT ON)
+    option(BOOST_SOCKS_BUILD_TESTS "Build boost::socks tests" ${BUILD_TESTING})
+    option(BOOST_SOCKS_BUILD_EXAMPLES "Build boost::socks examples" ON)
+    set(BOOST_SOCKS_IS_ROOT ON)
 else()
-    set(BOOST_SOCKS_PROTO_BUILD_TESTS ${BUILD_TESTING})
-    set(BOOST_SOCKS_PROTO_IS_ROOT OFF)
+    set(BOOST_SOCKS_BUILD_TESTS ${BUILD_TESTING})
+    set(BOOST_SOCKS_IS_ROOT OFF)
 endif()
 
 include(GNUInstallDirs)
-if(BOOST_SOCKS_PROTO_IS_ROOT)
-    set(BOOST_INCLUDE_LIBRARIES socks_proto asio beast url)
-    set(BOOST_EXCLUDE_LIBRARIES socks_proto)
+if(BOOST_SOCKS_IS_ROOT)
+    set(BOOST_INCLUDE_LIBRARIES socks asio beast url)
+    set(BOOST_EXCLUDE_LIBRARIES socks)
     set(CMAKE_FOLDER _deps)
     add_subdirectory(../.. _deps/boost EXCLUDE_FROM_ALL)
     unset(CMAKE_FOLDER)
 endif()
 
-function(boost_socks_proto_setup_properties target)
+function(boost_socks_setup_properties target)
     target_compile_features(${target} PUBLIC cxx_constexpr)
-    target_compile_definitions(${target} PUBLIC BOOST_SOCKS_PROTO_NO_LIB=1)
+    target_compile_definitions(${target} PUBLIC BOOST_SOCKS_NO_LIB=1)
 
     if(BOOST_SUPERPROJECT_VERSION)
         target_include_directories(${target} PUBLIC "${PROJECT_SOURCE_DIR}/include")
@@ -66,34 +66,34 @@ function(boost_socks_proto_setup_properties target)
     endif()
 endfunction()
 
-file(GLOB_RECURSE BOOST_SOCKS_PROTO_HEADERS CONFIGURE_DEPENDS
+file(GLOB_RECURSE BOOST_SOCKS_HEADERS CONFIGURE_DEPENDS
     include/boost/*.hpp
     include/boost/*.ipp
     include/boost/*.natvis
 )
 
-set(BOOST_SOCKS_PROTO_SOURCES src/src.cpp)
+set(BOOST_SOCKS_SOURCES src/src.cpp)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/include/boost PREFIX "" FILES ${BOOST_SOCKS_PROTO_HEADERS})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/src PREFIX "" FILES ${BOOST_SOCKS_PROTO_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/include/boost PREFIX "" FILES ${BOOST_SOCKS_HEADERS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/src PREFIX "" FILES ${BOOST_SOCKS_SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "" FILES Jamfile)
 
-add_library(boost_socks_proto ${BOOST_SOCKS_PROTO_HEADERS} ${BOOST_SOCKS_PROTO_SOURCES})
-add_library(Boost::socks_proto ALIAS boost_socks_proto)
-boost_socks_proto_setup_properties(boost_socks_proto)
+add_library(boost_socks ${BOOST_SOCKS_HEADERS} ${BOOST_SOCKS_SOURCES})
+add_library(Boost::socks ALIAS boost_socks)
+boost_socks_setup_properties(boost_socks)
 
 if(BUILD_SHARED_LIBS)
-    target_compile_definitions(boost_socks_proto PUBLIC BOOST_SOCKS_PROTO_DYN_LINK=1)
+    target_compile_definitions(boost_socks PUBLIC BOOST_SOCKS_DYN_LINK=1)
 else()
-    target_compile_definitions(boost_socks_proto PUBLIC BOOST_SOCKS_PROTO_STATIC_LINK=1)
+    target_compile_definitions(boost_socks PUBLIC BOOST_SOCKS_STATIC_LINK=1)
 endif()
 
-if(BOOST_SOCKS_PROTO_BUILD_TESTS)
+if(BOOST_SOCKS_BUILD_TESTS)
     add_subdirectory(test)
 endif()
 
-if(BOOST_SOCKS_PROTO_BUILD_EXAMPLES)
+if(BOOST_SOCKS_BUILD_EXAMPLES)
     add_subdirectory(example)
 endif()

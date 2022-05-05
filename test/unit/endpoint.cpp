@@ -9,4 +9,4 @@
 //
 
 // Test that header file is self-contained.
-#include <boost/socks_proto/endpoint.hpp>
+#include <boost/socks/endpoint.hpp>

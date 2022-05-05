@@ -220,7 +220,7 @@ socks_request(
                     socket,
                     target.encoded_host(),
                     default_port(target),
-                    socks::auth::no_auth{},
+                    socks::auth_options::none{},
                     ec);
             }
             else if (target.host_type() == urls::host_type::ipv4 ||
@@ -229,13 +229,13 @@ socks_request(
                 socks::connect(
                     socket,
                     get_endpoint_unchecked(target),
-                    socks::auth::no_auth{},
+                    socks::auth_options::none{},
                     ec);
             }
         }
         else
         {
-            socks::auth::userpass a{
+            socks::auth_options::userpass a{
                 socks.encoded_user(),
                 socks.encoded_password(),
             };

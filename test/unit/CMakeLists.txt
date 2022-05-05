@@ -14,7 +14,7 @@ set(EXTRAFILES
     )
 
 set(PFILES
-    auth.cpp
+    auth_options.cpp
     connect.cpp
     connect_v4.cpp
     endpoint.cpp

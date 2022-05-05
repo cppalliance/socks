@@ -186,7 +186,7 @@ private:
                         socket_,
                         target_.encoded_host(),
                         default_port(target_),
-                        socks::auth::no_auth{},
+                        socks::auth_options::none{},
                         cb);
                 }
                 else if (target_.host_type() == urls::host_type::ipv4 ||
@@ -195,13 +195,13 @@ private:
                     socks::async_connect(
                         socket_,
                         get_endpoint_unchecked(target_),
-                        socks::auth::no_auth{},
+                        socks::auth_options::none{},
                         cb);
                 }
             }
             else
             {
-                socks::auth::userpass a{
+                socks::auth_options::userpass a{
                     socks_.encoded_user(),
                     socks_.encoded_password(),
                 };

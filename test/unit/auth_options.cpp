@@ -9,4 +9,4 @@
 //
 
 // Test that header file is self-contained.
-#include <boost/socks_proto/auth.hpp>
+#include <boost/socks_proto/auth_options.hpp>

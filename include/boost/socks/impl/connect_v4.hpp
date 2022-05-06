@@ -161,7 +161,7 @@ connect_v4(
         target_host,
         socks_user);
     BOOST_ASSERT(n == buffer.size());
-    ignore_unused(n);
+
     asio::write(
         stream,
         asio::buffer(buffer.data(), n),

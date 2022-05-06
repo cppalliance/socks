@@ -42,16 +42,6 @@ BOOST_SOCKS_DECL
 address_type
 to_address_type(unsigned v);
 
-// Return the serialized string representing the SOCKS address_type
-BOOST_SOCKS_DECL
-string_view
-to_string(address_type v) noexcept;
-
-// Format the address_type to an output stream.
-BOOST_SOCKS_DECL
-std::ostream&
-operator<<(std::ostream& os, address_type v);
-
 } // detail
 } // socks
 } // boost

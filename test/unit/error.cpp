@@ -28,14 +28,14 @@ public:
             {
                 auto const ec = make_error_code(e);
                 BOOST_TEST(ec.category().name() != nullptr);
-                BOOST_TEST(! ec.message().empty());
+                BOOST_TEST_NOT(ec.message().empty());
                 BOOST_TEST(ec == c);
             }
             // condition
             {
                 auto ec = make_error_condition(c);
                 BOOST_TEST(ec.category().name() != nullptr);
-                BOOST_TEST(! ec.message().empty());
+                BOOST_TEST_NOT(ec.message().empty());
                 BOOST_TEST(ec == c);
             }
 
@@ -54,8 +54,21 @@ public:
         check(condition::reply_error, error::request_rejected_or_failed);
         check(condition::reply_error, error::cannot_connect_to_identd_on_the_client);
         check(condition::reply_error, error::client_and_identd_report_different_user_ids);
-        check(condition::reply_error, error::unassigned);
+        check(condition::reply_error, error::unassigned_reply_code);
+        check(condition::parse_error, error::bad_reply_size);
+        check(condition::parse_error, error::bad_reply_version);
+        check(condition::parse_error, error::bad_server_choice);
+        check(condition::parse_error, error::bad_reply_command);
+        check(condition::parse_error, error::bad_reserved_component);
+        check(condition::parse_error, error::bad_address_type);
+        check(condition::reply_error, error::unassigned_reply_code);
 
+        error_code ec = static_cast<error>(0xEF);
+        BOOST_TEST_EQ(
+            ec.default_error_condition().value(), 0xEF);
+
+        error_condition c = static_cast<condition>(0xEF);
+        BOOST_TEST_NOT(c.message().empty());
     }
 
     void

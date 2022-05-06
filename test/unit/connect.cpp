@@ -42,7 +42,8 @@ public:
 
     static
     std::array<unsigned char, 2>
-    make_greet_reply(detail::auth_method m)
+    make_greet_reply(
+        auth_method m = auth_method::no_authentication)
     {
         return {{0x05, static_cast<unsigned char>(m)}};
     }
@@ -73,7 +74,7 @@ public:
 
     static
     std::array<unsigned char, 10>
-    make_reply(reply_code r)
+    make_reply(reply_code r = reply_code::succeeded)
     {
         return {{
              0x05, // VER
@@ -89,8 +90,24 @@ public:
     }
 
     static
+    std::array<unsigned char, 8>
+    make_reply_incomplete(reply_code r = reply_code::succeeded)
+    {
+        return {{
+             0x05, // VER
+             static_cast<unsigned char>(r), // REP
+             0x00, // RSV
+             static_cast<unsigned char>(address_type::ip_v4), // ATYP
+             0x00, // BND. ADDR
+             0x00,
+             0x00,
+             0x00}};
+    }
+
+    static
     std::array<unsigned char, 22>
-    make_v5_reply_ipv6(reply_code r)
+    make_reply_ipv6(
+        reply_code r = reply_code::succeeded)
     {
         return {{
              0x05, // VER
@@ -105,34 +122,38 @@ public:
     }
 
     static
-    void
-    checkEndpoint(
-        unsigned char const* greet_reply,
-        std::size_t greet_reply_n,
-        unsigned char const* reply,
-        std::size_t reply_n,
-        auth_options const& auth,
-        error_code exp_ec)
+    std::array<unsigned char, 20>
+    make_reply_ipv6_incomplete(
+        reply_code r = reply_code::succeeded)
     {
-        io_context ioc;
-        // Mock proxy response
-        test::stream s(ioc);
-        s.reset_read(greet_reply, greet_reply_n);
-        s.append_read(reply, reply_n);
-        // Connect to proxy server
-        endpoint ep(asio::ip::make_address_v4(127), 0);
-        error_code ec;
-        endpoint app_ep = connect(s, ep, auth, ec);
-        // Compare to expected write values
-        auto buf1 = make_greeting(auth);
-        auto buf2 = make_request(ep);
-        BOOST_TEST(s.equal_write_buffers(
-            std::array<asio::const_buffer, 2>{
-                asio::buffer(buf1), asio::buffer(buf2)}));
-        BOOST_TEST_EQ(app_ep.address().to_v4(),
-                      asio::ip::make_address_v4("0.0.0.0"));
-        BOOST_TEST_EQ(ec, exp_ec);
-    };
+        return {{
+             0x05, // VER
+             static_cast<unsigned char>(r), // REP
+             0x00, // RSV
+             static_cast<unsigned char>(address_type::ip_v6), // ATYP
+             // BND. ADDR
+             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+             // BND. PORT
+             }};
+    }
+
+    static
+    std::array<unsigned char, 22>
+    make_reply_unknown(
+        reply_code r = reply_code::succeeded)
+    {
+        return {{
+             0x05, // VER
+             static_cast<unsigned char>(r), // REP
+             0x00, // RSV
+             0xEF, // ATYP (unknown)
+             // BND. ADDR
+             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+             // BND. PORT
+             0x00, 0x00}};
+    }
 
     template <std::size_t N1, std::size_t N2>
     static
@@ -141,16 +162,34 @@ public:
         std::array<unsigned char, N1> const& greet_reply,
         std::array<unsigned char, N2> const& reply,
         auth_options const& auth,
-        error_code exp_ec)
+        error_code exp_ec,
+        std::size_t fail_at = 0,
+        error_code fail_with = {},
+        endpoint const& ep = {
+            asio::ip::make_address_v4(
+                asio::ip::address_v4::uint_type(0)),
+                0})
     {
-        checkEndpoint(
-            greet_reply.data(),
-            greet_reply.size(),
-            reply.data(),
-            reply.size(),
-            auth,
-            exp_ec
-        );
+        io_context ioc;
+        // Mock proxy response
+        test::stream s(ioc, fail_at, fail_with);
+        s.reset_read(greet_reply.data(), greet_reply.size());
+        s.append_read(reply.data(), reply.size());
+        // Connect to proxy server
+        error_code ec;
+        endpoint app_ep = connect(s, ep, auth, ec);
+        // Compare to expected write values
+        if (!ec.failed())
+        {
+            auto buf1 = make_greeting(auth);
+            auto buf2 = make_request(ep);
+            BOOST_TEST(s.equal_write_buffers(
+                std::array<asio::const_buffer, 2>{
+                    asio::buffer(buf1),
+                    asio::buffer(buf2) }));
+        }
+        BOOST_TEST_EQ(app_ep, ep);
+        BOOST_TEST_EQ(ec, exp_ec);
     };
 
     static
@@ -161,10 +200,8 @@ public:
         {
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
-                make_greet_reply(
-                    auth_method::no_authentication),
-                make_reply(
-                    reply_code::succeeded),
+                make_greet_reply(),
+                make_reply(),
                 auth_options::none{},
                 error::succeeded);
         }
@@ -175,204 +212,152 @@ public:
             checkEndpoint(
                 make_greet_reply(
                     auth_method::userpass),
-                make_reply(
-                    reply_code::succeeded),
+                make_reply(),
                 auth_options::userpass{"user", "pass"},
                 error::succeeded);
         }
 
         // successful ipv6
         {
-            auto g = make_greet_reply(
-                auth_method::no_authentication);
-            auto r = make_v5_reply_ipv6(
-                reply_code::succeeded);
-            io_context ioc;
-            // Mock proxy response
-            test::stream s(ioc);
-            s.reset_read(g.data(), g.size());
-            s.append_read(r.data(), r.size());
-            // Connect to proxy server
             asio::ip::address_v6::bytes_type bytes;
             bytes.fill(0x00);
             endpoint ep(asio::ip::make_address_v6(bytes), 0);
-            error_code ec;
-            auto auth = auth_options::none{};
-            endpoint app_ep = connect(s, ep, auth, ec);
-            // Compare to expected write values
-            auto buf1 = make_greeting(auth);
-            auto buf2 = make_request(ep);
-            BOOST_TEST(s.equal_write_buffers(
-                std::array<asio::const_buffer, 2>{
-                    asio::buffer(buf1), asio::buffer(buf2)}));
-            BOOST_TEST_EQ(app_ep.address().to_v6(),
-                          asio::ip::make_address_v6(bytes));
-            BOOST_TEST_EQ(ec, error::succeeded);
+            BOOST_TEST_CHECKPOINT();
+            checkEndpoint(
+                make_greet_reply(),
+                make_reply_ipv6(),
+                auth_options::none{},
+                error::succeeded,
+                0,
+                {},
+                ep
+            );
         }
 
-        // reply buf too small
+        // wrong ATYP - ipv6
         {
-            auto g = make_greet_reply(
-                auth_method::no_authentication);
-            std::array<unsigned char, 1> r = {{0x05}};
+            auto reply = make_reply_ipv6();
+            reply[3] = static_cast<unsigned char>(
+                address_type::ip_v4);
+            BOOST_TEST_CHECKPOINT();
+            checkEndpoint(
+                make_greet_reply(),
+                reply,
+                auth_options::none{},
+                error::bad_reply_size
+            );
+        }
+
+        // wrong ATYP - ipv4
+        {
+            auto reply = make_reply();
+            reply[3] = static_cast<unsigned char>(
+                address_type::ip_v6);
+            BOOST_TEST_CHECKPOINT();
+            checkEndpoint(
+                make_greet_reply(),
+                reply,
+                auth_options::none{},
+                error::bad_reply_size
+            );
+        }
+
+        // incomplete greet reply version
+        {
+            auto g = make_greet_reply();
+            g[0] = 0x04;
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
                 g,
-                r,
+                make_reply(),
                 auth_options::none{},
-                error::bad_reply_size);
+                error::bad_reply_version,
+                0,
+                {}
+            );
         }
 
-        // wrong version
+        // incomplete greet reply method
         {
-            auto g = make_greet_reply(
-                auth_method::no_authentication);
-            auto r = make_reply(
-                reply_code::succeeded);
-            r[0] = 0x04;
+            auto g = make_greet_reply();
+            g[1] = 0xEF;
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
                 g,
-                r,
+                make_reply(),
                 auth_options::none{},
-                error::bad_reply_version);
+                error::bad_server_choice,
+                0,
+                {}
+            );
         }
 
-        // request rejected
+        // incomplete greet reply
         {
-            auto g = make_greet_reply(
-                auth_method::no_authentication);
-            auto r = make_reply(
-                reply_code::general_failure);
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
-                g,
-                r,
+                std::array<unsigned char, 1>{{0x05}},
+                std::array<unsigned char, 0>{{}},
                 auth_options::none{},
-                error::general_failure);
+                error::bad_reply_size,
+                0,
+                {}
+            );
         }
 
-        // missing endpoint
+        // incomplete ipv4 reply
         {
-            auto g = make_greet_reply(
-                auth_method::no_authentication);
-            std::array<unsigned char, 2> r = {{
-                 0x05,
-                 static_cast<unsigned char>(
-                 reply_code::succeeded)}};
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
-                g,
-                r,
+                make_greet_reply(),
+                make_reply_incomplete(),
                 auth_options::none{},
-                error::bad_reply_size);
+                error::bad_reply_size,
+                0,
+                {}
+            );
         }
 
-        // write failure
+        // incomplete ipv6 reply
         {
-            io_context ioc;
-            test::stream s(ioc);
-            s.reset_write(0);
-            s.reset_write_ec(asio::error::no_permission);
-            endpoint ep(asio::ip::make_address_v4(127), 0);
-            error_code ec;
-            auth_options::none auth{};
-            endpoint app_ep = connect(s, ep, auth, ec);
-            BOOST_TEST_EQ(app_ep.address().to_v4(),
-                          asio::ip::make_address_v4("0.0.0.0"));
-            BOOST_TEST_EQ(ec, asio::error::no_permission);
+            BOOST_TEST_CHECKPOINT();
+            checkEndpoint(
+                make_greet_reply(),
+                make_reply_ipv6_incomplete(),
+                auth_options::none{},
+                error::bad_reply_size,
+                0,
+                {}
+            );
         }
 
-        // 2nd write failure
+        // unknown address type in reply
         {
-            io_context ioc;
-            test::stream s(ioc);
-            auto g = make_greet_reply(
-                auth_method::no_authentication);
-            s.reset_read(g.data(), g.size());
-            s.reset_write(3);
-            s.reset_write_ec2(asio::error::no_permission);
-            endpoint ep(asio::ip::make_address_v4(127), 0);
-            error_code ec;
-            auth_options::none auth{};
-            endpoint app_ep = connect(s, ep, auth, ec);
-            auto buf1 = make_greeting(auth);
-            BOOST_TEST(s.equal_write_buffers(asio::buffer(buf1)));
-            BOOST_TEST_EQ(app_ep.address().to_v4(),
-                          asio::ip::make_address_v4("0.0.0.0"));
-            BOOST_TEST_EQ(ec, asio::error::no_permission);
+            BOOST_TEST_CHECKPOINT();
+            checkEndpoint(
+                make_greet_reply(),
+                make_reply_unknown(),
+                auth_options::none{},
+                error::bad_address_type,
+                0,
+                {}
+            );
         }
 
-        // read failure
+        // invalid/unassigned reply code
         {
-            io_context ioc;
-            test::stream s(ioc);
-            s.reset_read(nullptr, 0);
-            s.reset_read_ec(asio::error::no_permission);
-            endpoint ep(asio::ip::make_address_v4(127), 0);
-            error_code ec;
-            auth_options::none auth{};
-            endpoint app_ep = connect(s, ep, auth_options::none{}, ec);
-            auto buf1 = make_greeting(auth);
-            BOOST_TEST(s.equal_write_buffers(asio::buffer(buf1)));
-            BOOST_TEST_EQ(app_ep.address().to_v4(),
-                          asio::ip::make_address_v4("0.0.0.0"));
-            BOOST_TEST_EQ(ec, asio::error::no_permission);
+            BOOST_TEST_CHECKPOINT();
+            checkEndpoint(
+                make_greet_reply(),
+                make_reply(static_cast<reply_code>(0xEF)),
+                auth_options::none{},
+                error::unassigned_reply_code,
+                0,
+                {}
+            );
         }
 
-        // 2nd read failure
-        {
-            io_context ioc;
-            test::stream s(ioc);
-            auto g = make_greet_reply(
-                auth_method::no_authentication);
-            s.reset_read(g.data(), g.size());
-            s.reset_read_ec2(asio::error::no_permission);
-            endpoint ep(asio::ip::make_address_v4(127), 0);
-            error_code ec;
-            auth_options::none auth{};
-            endpoint app_ep = connect(s, ep, auth_options::none{}, ec);
-            auto buf1 = make_greeting(auth);
-            auto buf2 = make_request(ep);
-            BOOST_TEST(s.equal_write_buffers(
-                std::array<asio::const_buffer, 2>{
-                    asio::buffer(buf1), asio::buffer(buf2)}));
-            BOOST_TEST_EQ(app_ep.address().to_v4(),
-                          asio::ip::make_address_v4("0.0.0.0"));
-            BOOST_TEST_EQ(ec, asio::error::no_permission);
-        }
-
-        // success ipv6
-        {
-            io_context ioc;
-            // Mock proxy response
-            test::stream s(ioc);
-            auto greet_reply = make_greet_reply(
-                auth_method::no_authentication);
-            auto reply = make_v5_reply_ipv6(
-                reply_code::succeeded);
-            s.reset_read(greet_reply.data(), greet_reply.size());
-            s.append_read(reply.data(), reply.size());
-            // Connect to proxy server
-            asio::ip::address_v6::bytes_type ip_bytes;
-            ip_bytes.fill(0);
-            endpoint ep(asio::ip::make_address_v6(ip_bytes), 0);
-            error_code ec;
-            auth_options::none auth{};
-            endpoint app_ep = connect(s, ep, auth, ec);
-            // Compare to expected write values
-            auto buf1 = make_greeting(auth);
-            auto buf2 = make_request(ep);
-            BOOST_TEST(s.equal_write_buffers(
-                std::array<asio::const_buffer, 2>{
-                    asio::buffer(buf1), asio::buffer(buf2)}));
-            BOOST_TEST(app_ep.address().is_v6());
-            BOOST_TEST_EQ(app_ep.address().to_v6(),
-                          asio::ip::make_address_v6(ip_bytes));
-            BOOST_TEST_EQ(ec, error::succeeded);
-        }
-
-        // successful hostname
+        // successful domain name
         {
             io_context ioc;
             // Mock proxy response
@@ -401,70 +386,186 @@ public:
             BOOST_TEST_EQ(ec, error::succeeded);
         }
 
-        // read failure
+        // authentication failure - domain name
         {
             io_context ioc;
+            // Mock proxy response
             test::stream s(ioc);
-            s.reset_read(nullptr, 0);
-            s.reset_read_ec(asio::error::no_permission);
-            endpoint ep(asio::ip::make_address_v4(127), 0);
+            auth_options::none auth;
+            auto greet_reply = make_greet_reply(
+                auth_method::no_authentication);
+            greet_reply[0] = 0x04;
+            s.reset_read(greet_reply.data(), greet_reply.size());
+            auto reply = make_reply(reply_code::succeeded);
+            s.append_read(reply.data(), reply.size());
+            // Connect to proxy server
             error_code ec;
-            endpoint app_ep = connect(
-                s, "www.example.com", 80, auth_options::none{}, ec);
-            BOOST_TEST_EQ(app_ep.address().to_v4(),
-                          asio::ip::make_address_v4("0.0.0.0"));
-            BOOST_TEST_EQ(ec, asio::error::no_permission);
-        }
-
-        // write failure
-        {
-            io_context ioc;
-            test::stream s(ioc);
-            auto r = make_reply(
-                reply_code::succeeded);
-            s.reset_read(r.data(), r.size());
-            s.reset_read_ec(asio::error::no_permission);
-            endpoint ep(asio::ip::make_address_v4(127), 0);
-            error_code ec;
-            endpoint app_ep = connect(
-                s, "www.example.com", 80, auth_options::none{}, ec);
-            BOOST_TEST_EQ(app_ep.address().to_v4(),
-                          asio::ip::make_address_v4("0.0.0.0"));
-            BOOST_TEST_EQ(ec, asio::error::no_permission);
-        }
-    }
-
-    static
-    void
-    checkAsyncEndpoint(
-        unsigned char const* greet_reply,
-        std::size_t greet_reply_n,
-        unsigned char const* reply,
-        std::size_t reply_n,
-        auth_options const& auth,
-        error_code exp_ec)
-    {
-        io_context ioc;
-        // Mock proxy response
-        test::stream s(ioc);
-        s.reset_read(greet_reply, greet_reply_n);
-        s.append_read(reply, reply_n);
-        // Connect to proxy server
-        endpoint ep(asio::ip::make_address_v4(127), 0);
-        async_connect(s, ep, auth,
-            [&](error_code ec, endpoint app_ep)
-        {
+            endpoint app_ep =
+                connect(s, "www.example.com", 80, auth, ec);
             // Compare to expected write values
             auto buf1 = make_greeting(auth);
+            detail::domain_endpoint_view ep;
+            ep.domain  = "www.example.com";
+            ep.port = 80;
+            BOOST_TEST(s.equal_write_buffers(
+                asio::buffer(buf1)));
+            BOOST_TEST_EQ(app_ep.address().to_v4(),
+                          asio::ip::make_address_v4("0.0.0.0"));
+            BOOST_TEST_EQ(ec, error::bad_reply_version);
+        }
+
+        // write connect failure - domain name
+        {
+            io_context ioc;
+            // Mock proxy response
+            test::stream s(ioc, 2, error::general_failure);
+            auth_options::none auth;
+            auto greet_reply = make_greet_reply(
+                auth_method::no_authentication);
+            s.reset_read(greet_reply.data(), greet_reply.size());
+            auto reply = make_reply(reply_code::succeeded);
+            s.append_read(reply.data(), reply.size());
+            // Connect to proxy server
+            error_code ec;
+            endpoint app_ep =
+                connect(s, "www.example.com", 80, auth, ec);
+            // Compare to expected write values
+            auto buf1 = make_greeting(auth);
+            detail::domain_endpoint_view ep;
+            ep.domain  = "www.example.com";
+            ep.port = 80;
             auto buf2 = make_request(ep);
             BOOST_TEST(s.equal_write_buffers(
                 std::array<asio::const_buffer, 2>{
                     asio::buffer(buf1), asio::buffer(buf2)}));
             BOOST_TEST_EQ(app_ep.address().to_v4(),
                           asio::ip::make_address_v4("0.0.0.0"));
-            BOOST_TEST_EQ(ec, exp_ec);
-        });
-        ioc.run();
+            BOOST_TEST_EQ(ec, error::general_failure);
+        }
+
+        // read connect failure - domain name
+        {
+            io_context ioc;
+            // Mock proxy response
+            test::stream s(ioc, 3, error::general_failure);
+            auth_options::none auth;
+            auto greet_reply = make_greet_reply(
+                auth_method::no_authentication);
+            s.reset_read(greet_reply.data(), greet_reply.size());
+            auto reply = make_reply(reply_code::succeeded);
+            s.append_read(reply.data(), reply.size());
+            // Connect to proxy server
+            error_code ec;
+            endpoint app_ep =
+                connect(s, "www.example.com", 80, auth, ec);
+            // Compare to expected write values
+            auto buf1 = make_greeting(auth);
+            detail::domain_endpoint_view ep;
+            ep.domain  = "www.example.com";
+            ep.port = 80;
+            auto buf2 = make_request(ep);
+            BOOST_TEST(s.equal_write_buffers(
+                std::array<asio::const_buffer, 2>{
+                    asio::buffer(buf1), asio::buffer(buf2)}));
+            BOOST_TEST_EQ(app_ep.address().to_v4(),
+                          asio::ip::make_address_v4("0.0.0.0"));
+            BOOST_TEST_EQ(ec, error::general_failure);
+        }
+
+        // reply buf too small
+        {
+            BOOST_TEST_CHECKPOINT();
+            checkEndpoint(
+                make_greet_reply(),
+                std::array<unsigned char, 1>{{0x05}},
+                auth_options::none{},
+                error::bad_reply_size);
+        }
+
+        // wrong version
+        {
+            auto r = make_reply(
+                reply_code::succeeded);
+            r[0] = 0x04;
+            BOOST_TEST_CHECKPOINT();
+            checkEndpoint(
+                make_greet_reply(),
+                r,
+                auth_options::none{},
+                error::bad_reply_version);
+        }
+
+        // request rejected
+        {
+            BOOST_TEST_CHECKPOINT();
+            checkEndpoint(
+                make_greet_reply(),
+                make_reply(
+                    reply_code::general_failure),
+                auth_options::none{},
+                error::general_failure);
+        }
+
+        // missing endpoint
+        {
+            BOOST_TEST_CHECKPOINT();
+            checkEndpoint(
+                make_greet_reply(),
+                std::array<unsigned char, 2>{{
+                     0x05,
+                     static_cast<unsigned char>(
+                     reply_code::succeeded)}},
+                auth_options::none{},
+                error::bad_reply_size);
+        }
+
+        // write failure
+        {
+            BOOST_TEST_CHECKPOINT();
+            checkEndpoint(
+                std::array<unsigned char, 0>{{}},
+                std::array<unsigned char, 0>{{}},
+                auth_options::none{},
+                error::general_failure,
+                0,
+                error::general_failure);
+        }
+
+        // read failure
+        {
+            BOOST_TEST_CHECKPOINT();
+            checkEndpoint(
+                std::array<unsigned char, 0>{{}},
+                std::array<unsigned char, 0>{{}},
+                auth_options::none{},
+                error::general_failure,
+                1,
+                error::general_failure);
+        }
+
+        // 2nd write failure
+        {
+            BOOST_TEST_CHECKPOINT();
+            checkEndpoint(
+                make_greet_reply(),
+                std::array<unsigned char, 0>{{}},
+                auth_options::none{},
+                error::general_failure,
+                2,
+                error::general_failure);
+        }
+
+        // 2nd read failure
+        {
+            BOOST_TEST_CHECKPOINT();
+            checkEndpoint(
+                make_greet_reply(),
+                make_reply(),
+                auth_options::none{},
+                error::general_failure,
+                3,
+                error::general_failure);
+        }
     }
 
     template <std::size_t N1, std::size_t N2>
@@ -474,18 +575,39 @@ public:
         std::array<unsigned char, N1> greet_reply,
         std::array<unsigned char, N2> reply,
         auth_options const& auth,
-        error_code exp_ec)
+        error_code exp_ec,
+        std::size_t fail_at = 0,
+        error_code fail_with = {},
+        endpoint const& ep = {
+             asio::ip::make_address_v4(
+                asio::ip::address_v4::uint_type(0)),
+                0})
     {
-        checkAsyncEndpoint(
-            greet_reply.data(),
-            greet_reply.size(),
-            reply.data(),
-            reply.size(),
-            auth,
-            exp_ec
-        );
+        io_context ioc;
+        // Mock proxy response
+        test::stream s(ioc, fail_at, fail_with);
+        s.reset_read(greet_reply.data(), greet_reply.size());
+        s.append_read(reply.data(), reply.size());
+        // Connect to proxy server
+        async_connect(s, ep, auth,
+            [&](error_code ec, endpoint app_ep)
+        {
+            // Compare to expected write values
+            auto buf1 = make_greeting(auth);
+            std::vector<unsigned char> buf2;
+            if (!fail_with.failed() || fail_at >= 2)
+                buf2 = make_request(ep);
+            BOOST_TEST(s.equal_write_buffers(
+                std::array<asio::const_buffer, 2>{
+                    asio::buffer(buf1),
+                    asio::buffer(buf2)}));
+            BOOST_TEST_EQ(app_ep, ep);
+            BOOST_TEST_EQ(ec, exp_ec);
+        });
+        ioc.run();
     }
 
+    static
     void
     testAsyncEndpoint()
     {
@@ -493,51 +615,41 @@ public:
         {
             BOOST_TEST_CHECKPOINT();
             checkAsyncEndpoint(
-                make_greet_reply(
-                    auth_method::no_authentication),
-                make_reply(
-                    reply_code::succeeded),
+                make_greet_reply(),
+                make_reply(),
                 auth_options::none{},
                 error::succeeded);
         }
 
         // user
         {
-            auto g = make_greet_reply(
-                auth_method::userpass);
-            auto r = make_reply(
-                reply_code::succeeded);
             BOOST_TEST_CHECKPOINT();
             checkAsyncEndpoint(
-                g,
-                r,
+                make_greet_reply(
+                    auth_method::userpass),
+                make_reply(),
                 auth_options::userpass{"user", "pass"},
                 error::succeeded);
         }
 
         // reply buf too small
         {
-            auto g = make_greet_reply(
-                auth_method::no_authentication);
-            std::array<unsigned char, 1> r = {{0x05}};
             BOOST_TEST_CHECKPOINT();
             checkAsyncEndpoint(
-                g,
-                r,
+                make_greet_reply(),
+                std::array<unsigned char, 1>{{0x05}},
                 auth_options::none{},
                 error::bad_reply_size);
         }
 
         // wrong version
         {
-            auto g = make_greet_reply(
-                auth_method::no_authentication);
             auto r = make_reply(
                 reply_code::succeeded);
             r[0] = 0x04;
             BOOST_TEST_CHECKPOINT();
             checkAsyncEndpoint(
-                g,
+                make_greet_reply(),
                 r,
                 auth_options::none{},
                 error::bad_reply_version);
@@ -545,153 +657,104 @@ public:
 
         // request rejected
         {
-            auto g = make_greet_reply(
-                auth_method::no_authentication);
-            auto r = make_reply(
-                reply_code::connection_refused);
             BOOST_TEST_CHECKPOINT();
             checkAsyncEndpoint(
-                g,
-                r,
+                make_greet_reply(),
+                make_reply(
+                    reply_code::connection_refused),
                 auth_options::none{},
                 error::connection_refused);
         }
 
         // missing reply endpoint
         {
-            auto g = make_greet_reply(
-                auth_method::no_authentication);
-            std::array<unsigned char, 3> r = {{
-                 0x05, // VER
-                 static_cast<unsigned char>(
-                 reply_code::succeeded), // REP
-                 0x00 // RSV
-            }};
             BOOST_TEST_CHECKPOINT();
             checkAsyncEndpoint(
-                g,
-                r,
+                make_greet_reply(),
+                std::array<unsigned char, 3>{{
+                    0x05, // VER
+                    static_cast<unsigned char>(
+                        reply_code::succeeded), // REP
+                    0x00 // RSV
+                }},
                 auth_options::none{},
                 error::bad_reply_size);
         }
 
         // write failure
         {
-            io_context ioc;
-            test::stream s(ioc);
-            s.reset_write_ec(asio::error::no_permission);
-            endpoint ep(asio::ip::make_address_v4(127), 0);
-            async_connect(s, ep, auth_options::none{},
-                                 [&](error_code ec, endpoint app_ep)
-                                 {
-                auto buf = make_greeting(auth_options::none{});
-                BOOST_TEST(s.equal_write_buffers(asio::buffer(buf)));
-                BOOST_TEST_EQ(app_ep.address().to_v4(),
-                              asio::ip::make_address_v4("0.0.0.0"));
-                BOOST_TEST_EQ(ec, asio::error::no_permission);
-            });
-            ioc.run();
-        }
-
-        // 2nd write failure
-        {
-            io_context ioc;
-            // Mock proxy response
-            test::stream s(ioc);
-            auto g = make_greet_reply(
-                auth_method::no_authentication);
-            s.reset_read(g.data(), g.size());
-            // The second write should fail
-            s.reset_write_ec2(asio::error::no_permission);
-            // Connect to proxy server
-            endpoint ep(asio::ip::make_address_v4(127), 0);
-            async_connect(s, ep, auth_options::none{},
-                                 [&](error_code ec, endpoint app_ep)
-                                 {
-                auto buf1 = make_greeting(auth_options::none{});
-                auto buf2 = make_request(ep);
-                BOOST_TEST(s.equal_write_buffers(
-                    std::array<asio::const_buffer, 2>{
-                        asio::buffer(buf1), asio::buffer(buf2)}));
-                BOOST_TEST_EQ(app_ep.address().to_v4(),
-                              asio::ip::make_address_v4("0.0.0.0"));
-                BOOST_TEST_EQ(ec, asio::error::no_permission);
-            });
-            ioc.run();
+            BOOST_TEST_CHECKPOINT();
+            checkAsyncEndpoint(
+                std::array<unsigned char, 0>{{}},
+                std::array<unsigned char, 0>{{}},
+                auth_options::none{},
+                error::general_failure,
+                0,
+                error::general_failure);
         }
 
         // read failure
         {
-            io_context ioc;
-            test::stream s(ioc);
-            s.reset_read(nullptr, 0);
-            s.reset_read_ec(asio::error::no_permission);
-            endpoint ep(asio::ip::make_address_v4(127), 0);
-            async_connect(s, ep, auth_options::none{},
-                                 [&](error_code ec, endpoint app_ep)
-                                 {
-                auto buf = make_greeting(auth_options::none{});
-                BOOST_TEST(s.equal_write_buffers(asio::buffer(buf)));
-                BOOST_TEST_EQ(app_ep.address().to_v4(),
-                              asio::ip::make_address_v4("0.0.0.0"));
-                BOOST_TEST_EQ(ec, asio::error::no_permission);
-            });
-            ioc.run();
+            BOOST_TEST_CHECKPOINT();
+            checkAsyncEndpoint(
+                make_greet_reply(),
+                std::array<unsigned char, 0>{{}},
+                auth_options::none{},
+                error::general_failure,
+                1,
+                error::general_failure);
+        }
+
+        // 2nd write failure
+        {
+            BOOST_TEST_CHECKPOINT();
+            checkAsyncEndpoint(
+                make_greet_reply(),
+                std::array<unsigned char, 0>{{}},
+                auth_options::none{},
+                error::general_failure,
+                2,
+                error::general_failure);
         }
 
         // 2nd read failure
         {
-            io_context ioc;
-            test::stream s(ioc);
-            auto g = make_greet_reply(
-                auth_method::no_authentication);
-            auto r = make_reply(
-                reply_code::succeeded);
-            s.reset_read(g.data(), g.size());
-            s.append_read(r.data(), r.size());
-            s.reset_read_ec2(asio::error::no_permission);
-            endpoint ep(asio::ip::make_address_v4(127), 0);
-            async_connect(s, ep, auth_options::none{},
-                                 [&](error_code ec, endpoint app_ep)
-                                 {
-                auto buf1 = make_greeting(auth_options::none{});
-                auto buf2 = make_request(ep);
-                BOOST_TEST(s.equal_write_buffers(
-                    std::array<asio::const_buffer, 2>{
-                        asio::buffer(buf1), asio::buffer(buf2)}));
-                BOOST_TEST_EQ(app_ep.address().to_v4(),
-                              asio::ip::make_address_v4("0.0.0.0"));
-                BOOST_TEST_EQ(ec, asio::error::no_permission);
-            });
-            ioc.run();
+            BOOST_TEST_CHECKPOINT();
+            checkAsyncEndpoint(
+                make_greet_reply(),
+                make_reply(),
+                auth_options::none{},
+                error::general_failure,
+                3,
+                error::general_failure);
         }
 
-        // fail to read
+        // successful domain name
         {
             io_context ioc;
             test::stream s(ioc);
-            s.reset_read(nullptr, 0);
-            s.reset_read_ec(asio::error::no_permission);
-            endpoint ep(asio::ip::make_address_v4(127), 0);
+            auth_options::none auth;
+            auto greet_reply = make_greet_reply(
+                auth_method::no_authentication);
+            s.reset_read(greet_reply.data(), greet_reply.size());
+            auto reply = make_reply(reply_code::succeeded);
+            s.append_read(reply.data(), reply.size());
             async_connect(
-                s, "www.example.com", 80, auth_options::none{},
+                s, "www.example.com", 80, auth,
                 [](error_code ec, endpoint app_ep)
                 {
-                BOOST_TEST_EQ(app_ep.address().to_v4(),
-                              asio::ip::make_address_v4("0.0.0.0"));
-                BOOST_TEST_EQ(ec, make_error_code(asio::error::no_permission));
+                    BOOST_TEST_EQ(app_ep.address().to_v4(),
+                                  asio::ip::make_address_v4("0.0.0.0"));
+                    BOOST_TEST_EQ(ec, error::succeeded);
                 });
             ioc.run();
         }
 
-        // fail to write
+        // fail to read - domain name
         {
             io_context ioc;
-            test::stream s(ioc);
-            auto r = make_reply(
-                reply_code::succeeded);
-            s.reset_read(r.data(), r.size());
-            s.reset_read_ec(asio::error::no_permission);
+            test::stream s(ioc, 1, error::general_failure);
+            s.reset_read(nullptr, 0);
             endpoint ep(asio::ip::make_address_v4(127), 0);
             async_connect(
                 s, "www.example.com", 80, auth_options::none{},
@@ -699,7 +762,26 @@ public:
                 {
                 BOOST_TEST_EQ(app_ep.address().to_v4(),
                               asio::ip::make_address_v4("0.0.0.0"));
-                BOOST_TEST_EQ(ec, make_error_code(asio::error::no_permission));
+                BOOST_TEST_EQ(ec, error::general_failure);
+                });
+            ioc.run();
+        }
+
+        // fail to write - domain name
+        {
+            io_context ioc;
+            test::stream s(ioc, 1, error::general_failure);
+            auto r = make_reply(
+                reply_code::succeeded);
+            s.reset_read(r.data(), r.size());
+            endpoint ep(asio::ip::make_address_v4(127), 0);
+            async_connect(
+                s, "www.example.com", 80, auth_options::none{},
+                [](error_code ec, endpoint app_ep)
+                {
+                BOOST_TEST_EQ(app_ep.address().to_v4(),
+                              asio::ip::make_address_v4("0.0.0.0"));
+                BOOST_TEST_EQ(ec, error::general_failure);
                 });
             ioc.run();
         }
@@ -715,7 +797,7 @@ public:
 
 TEST_SUITE(
     io_connect_test,
-    "boost.socks.io.connect");
+    "boost.socks.connect");
 
 } // socks
 } // boost

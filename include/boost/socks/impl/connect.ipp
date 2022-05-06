@@ -22,8 +22,7 @@ prepare_greeting(
     std::initializer_list<unsigned char> methods)
 {
     BOOST_ASSERT(methods.size() <= 255);
-    if (n < 2 + methods.size())
-        return 0;
+    BOOST_ASSERT(n >= 2 + methods.size());
 
     // VER
     buffer[0] = static_cast<unsigned char>(
@@ -203,8 +202,9 @@ parse_reply_v5(
     {
     case address_type::ip_v4:
     {
-        if (n < 10)
+        if (n != 10)
         {
+            ec = error::bad_reply_size;
             return {};
         }
         std::uint32_t ip{ buffer[4] };
@@ -221,23 +221,23 @@ parse_reply_v5(
     }
     case address_type::ip_v6:
     {
-        if (n < 22)
+        if (n != 22)
         {
+            ec = error::bad_reply_size;
             return {};
         }
         asio::ip::address_v6::bytes_type ip;
-        std::size_t i = 0;
         std::memcpy(ip.data(), buffer + 4, 16);
-        std::uint16_t port{ buffer[i++] };
+        std::uint16_t port{ buffer[20] };
         port <<= 8;
-        port |= buffer[i++];
+        port |= buffer[21];
         return endpoint{
             asio::ip::make_address_v6(ip),
             port
         };
     }
     default:
-        ec = error::general_failure;
+        ec = error::bad_address_type;
         return {};
     }
 }
@@ -249,15 +249,13 @@ validate_server_choice(
     unsigned char code,
     error_code& ec)
 {
-    if (ec.failed())
-        return;
-    else if (n < 2)
+    if (n < 2)
         ec = error::bad_reply_size;
     else if (buffer[0] != 0x05)
         ec = error::bad_reply_version;
     else if (buffer[1] != code &&
              buffer[1] != 0x00)
-        ec = error::bad_auth_server_choice;
+        ec = error::bad_server_choice;
 }
 
 void
@@ -275,3 +273,4 @@ validate_server_choice(
 } // boost
 
 #endif
+

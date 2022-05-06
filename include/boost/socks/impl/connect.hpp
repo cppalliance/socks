@@ -28,6 +28,8 @@
 #include <boost/core/allocator_access.hpp>
 #include <boost/core/empty_value.hpp>
 
+#include <iostream>
+
 namespace boost {
 namespace socks {
 namespace detail {
@@ -161,7 +163,9 @@ authenticate(
         stream,
         asio::buffer(buffer, 2),
         ec);
-    validate_server_choice(buffer, n, opt, ec);
+    if (!ec.failed() ||
+        ec == asio::error::eof)
+        validate_server_choice(buffer, n, opt, ec);
 
     // AFREITAS Implement sync sub-negotiation
     // This is ignoring the server methods
@@ -215,13 +219,10 @@ struct read_reply_cond {
         // max size = 22 because reply should not
         // contain domain name in BND.ADDR
         // min size = 10, when BND.ADDR is ipv4
-        if (ec.failed())
+        if ((n == 10 &&
+            to_address_type(buf[3]) == address_type::ip_v4) ||
+            ec.failed())
             return 0;
-        if (n == 10 &&
-            to_address_type(buf[3]) == address_type::ip_v4)
-        {
-            return 0;
-        }
         return 22 - n;
     }
 
@@ -316,8 +317,10 @@ public:
                 s_,
                 asio::buffer(buf_.data(), 2),
                 std::move(self));
-            validate_server_choice(
-                buf_.data(), n, opt_, ec);
+            if (!ec.failed() ||
+                ec == asio::error::eof)
+                validate_server_choice(
+                    buf_.data(), n, opt_, ec);
             if (ec.failed())
                 goto complete;
 
@@ -347,8 +350,7 @@ public:
                 s_,
                 asio::buffer(buf_.data(), 22),
                 read_reply_cond{buf_.data()},
-                std::move(self)
-            );
+                std::move(self));
             if (ec.failed() &&
                 ec != asio::error::eof)
             {

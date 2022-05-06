@@ -97,7 +97,6 @@ parse_reply_v4(
         asio::ip::make_address_v4(ip),
         port
     };
-    ec = {};
     return ep;
 }
 

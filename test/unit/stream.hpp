@@ -130,8 +130,13 @@ public:
     using executor_type = asio::io_context::executor_type;
 
     explicit
-    stream(asio::io_context& io_context)
-    : ioc_(io_context)
+    stream(
+        asio::io_context& io_context,
+        std::size_t fail_at = 0,
+        error_code fail_with = {})
+        : ioc_(io_context)
+        , fail_at_(fail_at)
+        , fail_with_(fail_with)
     {
     }
 
@@ -147,13 +152,11 @@ public:
     std::size_t
     read_some(const MutableBufferSequence& buffers)
     {
-        std::size_t n = asio::buffer_copy(buffers,
+        std::size_t n = asio::buffer_copy(
+            buffers,
             asio::buffer(rbuf_, rsize_) + rpos_,
-            rnext_);
+            rsize_ - rpos_);
         rpos_ += n;
-        if (rpos_ == rnext_) {
-            rnext_ = rsize_ - rpos_;
-        }
         return n;
     }
 
@@ -164,9 +167,7 @@ public:
         const MutableBufferSequence& buffers,
         error_code& ec)
     {
-        ec = rec_;
-        rec_ = rec2_;
-        rec2_ = {};
+        maybe_fail(ec);
         std::size_t n = this->read_some(buffers);
         if (!ec.failed() &&
             n != asio::buffer_size(buffers))
@@ -181,7 +182,8 @@ public:
     {
         size_t n = asio::buffer_copy(
             asio::buffer(wbuf_, wsize_) + wpos_,
-            buffers, wnext_);
+            buffers,
+            wsize_ - wpos_);
         wpos_ += n;
         return n;
     }
@@ -193,9 +195,7 @@ public:
         const ConstBufferSequence& buffers,
         error_code& ec)
     {
-        ec = wec_;
-        wec_ = wec2_;
-        wec2_ = {};
+        maybe_fail(ec);
         return this->write_some(buffers);
     }
 
@@ -240,7 +240,6 @@ public:
         }
         rsize_ = length;
         rpos_ = 0;
-        rnext_ = length;
     }
 
     void
@@ -256,7 +255,6 @@ public:
             length = 0;
         }
         rsize_ += length;
-        rpos_ = 0;
     }
 
     void
@@ -266,41 +264,6 @@ public:
         memset(wbuf_, 0, max_cap_);
         wsize_ = length;
         wpos_ = 0;
-        wnext_ = length;
-    }
-
-    void
-    reset_read_ec(error_code ec)
-    {
-        rec_ = ec;
-    }
-
-    void
-    reset_write_ec(error_code ec)
-    {
-        wec_ = ec;
-    }
-
-    void
-    reset_read_ec2(error_code ec2)
-    {
-        rec2_ = ec2;
-    }
-
-    void
-    reset_write_ec2(error_code ec2)
-    {
-        wec2_ = ec2;
-    }
-
-    void next_read_length(std::size_t length)
-    {
-        rnext_ = length;
-    }
-
-    void next_write_length(std::size_t length)
-    {
-        wnext_ = length;
     }
 
     template <typename Iterator>
@@ -380,6 +343,15 @@ public:
     }
 
 private:
+    void
+    maybe_fail(error_code& ec)
+    {
+        if (fail_at_ == 0)
+            ec = fail_with_;
+        else
+            --fail_at_;
+    }
+
     template <typename Iterator>
     static
     bool
@@ -413,27 +385,22 @@ private:
         return true;
     }
 
-
-
     asio::io_context& ioc_;
-
     static constexpr std::size_t max_cap_ = 8192;
 
     // Read
     unsigned char rbuf_[max_cap_];
     std::size_t rsize_{0};
     std::size_t rpos_{0};
-    std::size_t rnext_{0};
-    error_code rec_{};
-    error_code rec2_{};
 
     // Write
     unsigned char wbuf_[max_cap_];
     std::size_t wsize_{max_cap_};
     std::size_t wpos_{0};
-    std::size_t wnext_{max_cap_};
-    error_code wec_{};
-    error_code wec2_{};
+
+    // Failure
+    std::size_t fail_at_{0};
+    error_code fail_with_{};
 };
 } // test
 } // socks

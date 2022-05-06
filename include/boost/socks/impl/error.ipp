@@ -48,11 +48,11 @@ make_error_code(error e)
             // Parsing error
             case error::bad_reply_size: return "Bad reply size";
             case error::bad_reply_version: return "Bad reply version";
-            case error::bad_auth_server_choice: return "Bad authentication server choice";
+            case error::bad_server_choice: return "Bad authentication server choice";
             case error::bad_reply_command: return "Bad reply command";
             case error::bad_reserved_component: return "Bad reserved component";
             case error::bad_address_type: return "Bad address type";
-            case error::unassigned:
+            case error::unassigned_reply_code:
             default: return "Unassigned";
             }
         }
@@ -77,11 +77,11 @@ make_error_code(error e)
             case error::request_rejected_or_failed:
             case error::cannot_connect_to_identd_on_the_client:
             case error::client_and_identd_report_different_user_ids:
-            case error::unassigned:
+            case error::unassigned_reply_code:
                 return condition::reply_error;
             case error::bad_reply_size:
             case error::bad_reply_version:
-            case error::bad_auth_server_choice:
+            case error::bad_server_choice:
             case error::bad_reply_command:
             case error::bad_reserved_component:
             case error::bad_address_type:
@@ -123,8 +123,6 @@ make_error_condition(condition c)
                 return "SOCKS reply successful";
             case condition::reply_error:
                 return "SOCKS reply with error";
-            case condition::proxy_error:
-                return "SOCKS proxy error";
             case condition::parse_error:
                 return "Cannot parse a request or reply";
             default:

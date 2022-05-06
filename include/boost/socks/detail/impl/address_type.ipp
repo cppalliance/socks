@@ -32,32 +32,6 @@ to_address_type(unsigned v)
     return address_type::unknown;
 }
 
-string_view
-to_string(address_type v) noexcept
-{
-    switch(v)
-    {
-    case address_type::ip_v4:
-        return "IPv4";
-    case address_type::domain_name:
-        return "Domain name";
-    case address_type::ip_v6:
-        return "IPv6";
-    default:
-        break;
-    }
-    return "UNKNOWN";
-}
-
-std::ostream&
-operator<<(
-    std::ostream& os,
-    address_type v)
-{
-    os << to_string(v);
-    return os;
-}
-
 } // detail
 } // http_proto
 } // boost

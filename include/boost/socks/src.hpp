@@ -29,12 +29,8 @@ in a translation unit of the program.
 #include <boost/socks/impl/error.ipp>
 
 #include <boost/socks/detail/impl/address_type.ipp>
-#include <boost/socks/detail/impl/auth_method.ipp>
-#include <boost/socks/detail/impl/command.ipp>
-#include <boost/socks/detail/impl/version.ipp>
 #include <boost/socks/detail/impl/reply_code.ipp>
 #include <boost/socks/detail/impl/reply_code_v4.ipp>
-#include <boost/socks/detail/impl/except.ipp>
 
 #endif
 

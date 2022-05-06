@@ -102,7 +102,7 @@ enum class error
     bad_reply_version,
 
     /// Bad authentication server choice
-    bad_auth_server_choice,
+    bad_server_choice,
 
     /// Bad reply command
     bad_reply_command,
@@ -122,7 +122,7 @@ enum class error
     // - SOCKS4 (0x00-0x59 and 0x5E-0xFF)
 
     /// Unassigned
-    unassigned                          = 0xFF,
+    unassigned_reply_code             = 0xFF,
 };
 
 /** Error conditions corresponding to SOCKS errors
@@ -134,9 +134,6 @@ enum class condition
 
     /// SOCKS reply with error
     reply_error,
-
-    /// SOCKS proxy error
-    proxy_error,
 
     /// Cannot parse a request or reply
     parse_error,

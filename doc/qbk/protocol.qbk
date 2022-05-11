@@ -7,6 +7,9 @@
     Official repository: https://github.com/CPPAlliance/url
 ]
 
+This section briefly discussed the SOCKS protocols and their relationship
+with the I/O operations provided by the library.
+
 [heading SOCKS4]
 
 SOCKS4 was developed by David Koblas and Michelle Koblas

@@ -27,6 +27,7 @@
 [template indexterm1[term1] '''<indexterm><primary>'''[term1]'''</primary></indexterm>''']
 [template indexterm2[term1 term2] '''<indexterm><primary>'''[term1]'''</primary><secondary>'''[term2]'''</secondary></indexterm>''']
 
+[template path_link[path name] '''<ulink url="../../'''[path]'''">'''[name]'''</ulink>''']
 [template include_file[path][^<'''<ulink url="https://github.com/alandefreitas/socks_proto/blob/master/include/'''[path]'''">'''[path]'''</ulink>'''>]]
 [template issue[n] '''<ulink url="https://github.com/alandefreitas/socks_proto/issues/'''[n]'''">#'''[n]'''</ulink>''']
 
@@ -67,18 +68,45 @@
 [def __async_connect_v4__       [link socks.ref.boost__socks__async_connect_v4 `async_connect_v4`]]
 [def __connect__                [link socks.ref.boost__socks__connect `connect`]]
 [def __async_connect__          [link socks.ref.boost__socks__async_connect `async_connect`]]
+[def __auth_options__          [link socks.ref.boost__socks__auth_options `auth_options`]]
 
 [/ Dingbats ]
 
 [def __good__ [role green \u2714]]
 [def __bad__  [role red   \u2718]]
 
+[import ../../example/client/sync/socks_client_sync.cpp]
+[import ../../example/client/async/socks_client_async.cpp]
+[import ../../test/unit/snippets.cpp]
+
 [/-----------------------------------------------------------------------------]
 
 [include overview.qbk]
 
+[section Quick Look]
+
+These complete programs are intended to quickly impress upon readers the flavor of the library.
+Source code and build scripts for them are located in the `example` directory.
+
+[include simple_socks_client.qbk]
+[include simple_async_socks_client.qbk]
+[endsect]
+
 [section Input/Output]
+
+This library offers programmers simple and performant models of synchronous
+and asynchronous SOCKS operations and messages.
+
 [include io_connect.qbk]
+[section Bind]
+TODO
+[endsect]
+[section UDP Associate]
+TODO
+[endsect]
+[section Listen]
+TODO
+[endsect]
 [endsect]
 
 [section Protocol]

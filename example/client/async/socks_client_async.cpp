@@ -5,6 +5,8 @@
 // https://www.boost.org/LICENSE_1_0.txt
 //
 
+//[example_socks_client_async
+
 #include <boost/socks/connect.hpp>
 #include <boost/socks/connect_v4.hpp>
 
@@ -421,3 +423,5 @@ int main(int argc, char** argv)
 
     return EXIT_SUCCESS;
 }
+
+//]

@@ -13,7 +13,77 @@
 [section Connect]
 
 A connect request is the most common operation in SOCKS clients.
-This functionality is provided by the __connect__ / __async_connect__
-and __connect_v4__ / __async_connect_v4__ functions.
+This functionality is provided by the following functions:
+
+[table
+[
+    []
+    [Sync]
+    [Async]
+]
+[
+    [SOCKS5]
+    [__connect__]
+    [__async_connect__]
+]
+[
+    [SOCKS4]
+    [__connect_v4__]
+    [__async_connect_v4__]
+]
+]
+
+[heading Connecting to Application Server]
+
+Once a socket is connected to the proxy server, a single connect request
+is made to establish a connection to the application server:
+
+[c++]
+[sync_connect]
+
+When the request is successful, the SOCKS server starts relaying traffic
+on both directions. Thus, the client can now perform I/O operations on
+the same connection as if it were directly connected to the application server.
+
+The function returns the endpoint with the address and port the SOCKS proxy
+assigned to connect to the target host. This is part of the connect reply
+message.
+
+Because SOCKS servers might be multi-homed, this endpoint might
+be different from the address the client used to reach the SOCKS server.
+
+[heading Connecting to Application Server]
+
+An asynchronous request is a composed operation that follows the usual pattern
+of Asio async functions:
+
+[c++]
+[async_connect]
+
+The asynchronous functions support any Asio continuation token, as other
+Asio functionalities. After the connect operation, the client can perform
+I/O on the socket as if connected to the application server.
+
+[heading Authentication]
+
+All `connect` functions include a parameter for authentication.
+
+SOCKS authentication happens through a composed operation that performs
+sub-negotiation of authentication parameters before the final
+connect request is sent.
+
+An object of type __auth_options__ can be used to specify the
+parameters of the authentication:
+
+[c++]
+[sync_connect_auth]
+
+In SOCKS4 (__connect_v4__ / __async_connect_v4__) operations,
+authentication happens via an __string_view__ describing the
+user identity. According to the protocol, this field is
+mandatory, although it can be empty.
+
+[c++]
+[sync_connect_v4]
 
 [endsect]

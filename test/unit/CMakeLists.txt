@@ -19,6 +19,7 @@ set(PFILES
     connect_v4.cpp
     endpoint.cpp
     error.cpp
+    snippets.cpp
     socks.cpp
     string_view.cpp
     )

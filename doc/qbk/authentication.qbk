@@ -11,18 +11,244 @@
 
 [section Authentication]
 
-All SOCKS implementations should support the GSSAPI (__rfc1961__) and
-Username/Password (__rfc1929__) methods.
+Unless the server chooses no authentication (`0x00`) for the
+following requests. The client and server then enter a
+method-specific sub-negotiation.
 
 If the selected authentication method supports encapsulation for the
-purposes of integrity, authentication and/or confidentiality, the
-data are encapsulated using the method-dependent encapsulation.
+purposes of integrity, authentication and/or confidentiality. The
+data are encapsulation method depends on the authentication agreement.
 
-Similarly, when data arrives at the SOCKS server for the client, the
-server *MUST* encapsulate the data as appropriate for the authentication
-method in use.
+Similarly, when the server writes data to the client, it *MUST*
+encapsulate the data as appropriate for the authentication method
+in use.
 
-[include gssapi.qbk]
-[include userpass.qbk]
+[heading Username/Password]
+
+Username/Password (__rfc1929__) is the most common authentication method
+in SOCKS5 connections. All SOCKS implementations should support this
+method (`0x02`).
+
+If the server has agreed with Username/Password authentication,
+the client should send a username/password request in the
+following format:
+
+[teletype]
+```
+    +-----+--------+-----+-------+-----+
+    | VER | IDLEN  | ID  | PWLEN | PW  |
+    +-----+--------+-----+-------+-----+
+       1      1     1-255    1    1-255
+```
+
+where:
+
+# `VER`: Username/Password protocol version number (1 byte: `0x01`)
+# `IDLEN`: Username length (1 byte)
+# `ID`: Username as bytestring (1-255 bytes)
+# `PWLEN`: Password length (1 byte)
+# `PW`: Username as bytestring (1-255 bytes)
+
+The server verifies the username and password, and should create
+an authentication response in the following format:
+
+[teletype]
+```
+    +-----+--------+
+    | VER | STATUS |
+    +-----+--------+
+       1      1
+```
+
+where:
+
+# `VER`: Username/Password protocol version number (1 byte: `0x01`)
+# `STATUS`: `0x00` for success or any other value for failure.
+
+[note
+
+    Username/password is the most common method used in
+    SOCKS authentication.
+
+    However, since the request carries the password in cleartext,
+    this subnegotiation method is not recommended for environments
+    where "sniffing" is possible and practical.
+
+    One frequent alternative has been SOCKS connections over TLS.
+]
+
+[heading GSS-API]
+
+GSS-API ([@https://datatracker.ietf.org/doc/html/rfc1508 RFC 1508],
+[@https://datatracker.ietf.org/doc/html/rfc2078 RFC 2078],
+[@https://datatracker.ietf.org/doc/html/rfc2743 RFC 2743])
+is a generic framework for a range of authentication strategies at
+an independent level of the underlying environment mechanism.
+Client and server exchange opaque tokens, and these tokens are used
+to perform per-message encapsulation. Concrete GSS-API bindings in
+C are available in
+[@https://datatracker.ietf.org/doc/html/rfc1509 RFC 1509] (v1) and
+[@https://datatracker.ietf.org/doc/html/rfc2744 RFC 2744] (v2).
+The use of GSS-API by the Secure Shell Protocol
+(SSH - [@https://datatracker.ietf.org/doc/html/rfc4251 RFC 4251])
+in standardised in [@https://datatracker.ietf.org/doc/html/rfc4462 RFC 4462].
+
+SOCKS clients that use the sub-negotiation method `0x02` should
+implement the method described in __rfc1961__ to authenticate SOCKS
+users in conjunction with the GSS-API. After exchanging tokens with
+the function `gss_init_sec_context` of the C API, the SOCKS
+client should send the output token to the server:
+
+[teletype]
+```
+    +------+------+------+.......................+
+    + VER  | MTYP | LEN  |       TOKEN           |
+    +------+------+------+.......................+
+    + 0x01 | 0x01 | 0x02 | up to 2^16 - 1 octets |
+    +------+------+------+.......................+
+```
+
+where:
+
+# `VER`: GSS-API/SOCKS protocol version number (1 byte: `0x01`)
+# `MTYP`: Message type. `0x01` for authentication message.
+# `LEN`: Length of the token field
+# `TOKEN`: Opaque authentication token emitted by GSS-API
+
+The server will call `gss_accept_sec_context` with the provided
+token:
+
+# This function might generate another token, which should be
+sent to the client in the same message format for another round
+of token exchanges.
+# If no token is returned, an empty token is sent to indicate
+the server is ready to receive the client's request.
+
+If the server refuses the connection, it should return:
+
+[teletype]
+```
+    +------+------+
+    + VER  | MTYP |
+    +------+------+
+    + 0x01 | 0xff |
+    +------+------+
+```
+
+where:
+
+# `VER`: GSS-API/SOCKS protocol version number (1 byte: `0x01`)
+# `MTYP`: Message type. `0xFF` for an abort message.
+
+After establishing the security context, the nodes exchanges their
+required and accepted protection levels:
+
+[teletype]
+```
+    +------+------+------+.......................+
+    + VER  | MTYP | LEN  |   TOKEN               |
+    +------+------+------+.......................+
+    + 0x01 | 0x02 | 0x02 | up to 2^16 - 1 octets |
+    +------+------+------+.......................+
+```
+
+where:
+
+# `VER`: GSS-API/SOCKS protocol version number (1 byte: `0x01`)
+# `MTYP`: Message type. `0x02` for protection level negotiation.
+# `LEN`: Length of the token field
+# `TOKEN`: GSS-API encapsulated protection level
+
+The `TOKEN` is generated and verified with the GSS-API functions
+`gss_seal()/gss_unseal()`. The user should close the connection
+if the server's protection level is unacceptable.
+
+From this point, client and server messages should be encapsulated
+with `gss_seal()`. The encapsulated messages should be sent in
+the following framing:
+
+[teletype]
+```
+    +------+------+------+.......................+
+    + VER  | MTYP | LEN  |   TOKEN               |
+    +------+------+------+.......................+
+    + 0x01 | 0x02 | 0x02 | up to 2^16 - 1 octets |
+    +------+------+------+.......................+
+```
+
+where:
+
+# `VER`: GSS-API/SOCKS protocol version number (1 byte: `0x01`)
+# `MTYP`: Message type. `0x03` for encapsulated user data.
+# `LEN`: Length of the token field
+# `TOKEN`: GSS-API encapsulated user data
+
+A number of authentication mechanisms exist for the GSS-API,
+such as:
+
+# The Simple Public-Key GSS-API Mechanism (SPKM)
+([@https://datatracker.ietf.org/doc/html/rfc2025 RFC 2025]),
+# Simple Authentication and Security Layer (SASL)
+([@https://datatracker.ietf.org/doc/html/rfc2222#section-7.2 RFC 2222, Section-7.2]),
+# A Low Infrastructure Public Key Mechanism Using SPKM
+([@https://datatracker.ietf.org/doc/html/rfc2847 RFC 2847]).
+# The Simple and Protected GSS-API Negotiation Mechanism
+([@https://datatracker.ietf.org/doc/html/rfc2478 RFC 2478],
+[@https://datatracker.ietf.org/doc/html/rfc4178 RFC 4178]).
+
+In practice, the dominant GSS-API mechanism implementation in use
+is [@https://web.mit.edu/kerberos/ Kerberos]
+([@https://datatracker.ietf.org/doc/html/rfc1510 RFC 1510])
+GSS-API mechanism ([@https://datatracker.ietf.org/doc/html/rfc1964 RFC 1964],
+[@https://datatracker.ietf.org/doc/html/rfc4121 RFC 4121]).
+
+Due to the complexity of the GSS-API and practical limitation on the
+number of authentication methods, SOCKS clients and servers
+usually do not support the GSS-API authentication method or
+redirect its calls to other libraries, such as
+[@https://www.gnu.org/software/gss/ Libgss].
+
+[heading Identification Protocol]
+
+__socks4__ does not specify a sub-negotiation step for authentication
+methods. Instead, the protocol describes all requests should contain
+an identity as defined by the Identity Protocol (or Ident) in __rfc1413__.
+
+The Ident protocol is meant to identify the user of a TCP connection.
+Suppose user `B`, port 6191, is connected to its the host `A`, port 23.
+Then `A` can open a connection on the Ident service on `B` (usually
+port 113) and send the query `6191, 23` to find out the username
+of  `B`. The client `B` would issue a response with identifying the
+user and the local operating system, such as
+`6193, 23 : USERID : UNIX : username`, or an error, such
+as `6195, 23 : ERROR : NO-USER`.
+
+In general, an Ident response has the following format:
+
+[teletype]
+```
+   <port-on-server> , <port-on-client> : <resp-type> : <add-info>
+```
+
+where:
+
+# `<port-on-server>`: Same as the server query port.
+# `<port-on-client>`: Same as the client query port.
+# `<resp-type>`: Keyword identifying the type of response.
+    # `USERID`: `<add-info>` will contain `<operating-system> : <identification>`
+    # `ERROR`: `<add-info>` will contain one of the error strings
+# `<add-info>`: Context dependent. User IDs have a 512 character limit.
+
+The Ident daemon is responsible for identifying the user in the
+server's system. The user id is provided by the system administrator.
+However, Ident provides no additional authentication
+when the user is connecting directly from their personal computer,
+on which they have enough privileges to control the Ident daemon.
+
+In practice, due the limited applicability of the protocol, SOCKS4
+servers tend to consider an empty identity as a request with no
+authentication and maintain a whitelist of permitted
+usernames. Ident requests can also be redirected to an ident
+service, such as `identd`.
 
 [endsect]

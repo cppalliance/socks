@@ -20,8 +20,8 @@ TCP port `1080`. If the connection succeeds, the client sends a
 `GREETING` packet to negotiate an authentication method.
 
 [note
-    While the `GREETING` packet is the first message to be sent to a
-    SOCKS5 server, a SOCKS4 server should start the procedure directly
+    While the `GREETING` packet is the first message sent to a
+    SOCKS5 server, a SOCKS4 client should start the procedure directly
     with a [link connect `CONNECT` request].
 ]
 

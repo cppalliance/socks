@@ -154,9 +154,9 @@ public:
     {
         std::size_t n = asio::buffer_copy(
             buffers,
-            asio::buffer(rbuf_, rsize_) + rpos_,
-            rsize_ - rpos_);
-        rpos_ += n;
+            asio::buffer(out_.data(), out_.size()) + n_read_,
+            std::min(out_.size() - n_read_, max_read_some_));
+        n_read_ += n;
         return n;
     }
 
@@ -180,11 +180,13 @@ public:
     std::size_t
     write_some(const ConstBufferSequence& buffers)
     {
+        std::size_t n0 = in_.size();
+        std::size_t n1 = asio::buffer_size(buffers);
+        in_.resize(n0 + n1);
         size_t n = asio::buffer_copy(
-            asio::buffer(wbuf_, wsize_) + wpos_,
+            asio::buffer(in_.data(), in_.size()) + n0,
             buffers,
-            wsize_ - wpos_);
-        wpos_ += n;
+            n1);
         return n;
     }
 
@@ -231,15 +233,32 @@ public:
     {
         if (data)
         {
-            BOOST_ASSERT(length <= max_cap_);
-            std::memcpy(rbuf_, data, length);
+            out_.resize(length);
+            std::memcpy(out_.data(), data, length);
         }
         else
         {
-            length = 0;
+            out_.resize(0);
         }
-        rsize_ = length;
-        rpos_ = 0;
+        n_read_ = 0;
+        max_read_some_ = -1;
+    }
+
+    template <
+        class ConstBufferSequence,
+        typename std::enable_if<
+            asio::is_const_buffer_sequence<
+                ConstBufferSequence
+                >::value,
+            int>::type = 0
+        >
+    void
+    reset_read(ConstBufferSequence const& buffers)
+    {
+        out_.resize(asio::buffer_size(buffers));
+        asio::buffer_copy(asio::buffer(out_), buffers);
+        n_read_ = 0;
+        max_read_some_ = -1;
     }
 
     void
@@ -247,23 +266,16 @@ public:
     {
         if (data)
         {
-            BOOST_ASSERT(length <= max_cap_ - rsize_);
-            std::memcpy(rbuf_ + rsize_, data, length);
+            std::size_t n0 = out_.size();
+            out_.resize(n0 + length);
+            std::memcpy(out_.data() + n0, data, length);
         }
-        else
-        {
-            length = 0;
-        }
-        rsize_ += length;
     }
 
     void
-    reset_write(std::size_t length = max_cap_)
+    reset_write()
     {
-        BOOST_ASSERT(length <= max_cap_);
-        memset(wbuf_, 0, max_cap_);
-        wsize_ = length;
-        wpos_ = 0;
+        in_.clear();
     }
 
     template <typename Iterator>
@@ -277,8 +289,8 @@ public:
             begin,
             end,
             length,
-            rbuf_,
-            rpos_);
+            out_.data(),
+            n_read_);
     }
 
     template <typename Iterator>
@@ -292,8 +304,8 @@ public:
             begin,
             end,
             length,
-            wbuf_,
-            wpos_);
+            in_.data(),
+            in_.size());
     }
 
     template <typename ConstBufferSequence>
@@ -385,18 +397,16 @@ private:
         return true;
     }
 
+    // I/O
     asio::io_context& ioc_;
-    static constexpr std::size_t max_cap_ = 8192;
 
-    // Read
-    unsigned char rbuf_[max_cap_];
-    std::size_t rsize_{0};
-    std::size_t rpos_{0};
+    // Out / Read
+    std::vector<unsigned char> out_;
+    std::size_t n_read_{0};
+    std::size_t max_read_some_{std::size_t(-1)};
 
-    // Write
-    unsigned char wbuf_[max_cap_];
-    std::size_t wsize_{max_cap_};
-    std::size_t wpos_{0};
+    // In / Write
+    std::vector<unsigned char> in_;
 
     // Failure
     std::size_t fail_at_{0};

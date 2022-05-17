@@ -60,7 +60,6 @@ struct auth_options {
         return is_userpass ? 0x02 : 0x00;
     }
 
-private:
     bool is_userpass{false};
     string_view user;
     string_view pass;

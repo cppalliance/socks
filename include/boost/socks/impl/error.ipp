@@ -52,6 +52,7 @@ make_error_code(error e)
             case error::bad_reply_command: return "Bad reply command";
             case error::bad_reserved_component: return "Bad reserved component";
             case error::bad_address_type: return "Bad address type";
+            case error::access_denied: return "Access denied";
             case error::unassigned_reply_code:
             default: return "Unassigned";
             }
@@ -85,6 +86,7 @@ make_error_code(error e)
             case error::bad_reply_command:
             case error::bad_reserved_component:
             case error::bad_address_type:
+            case error::access_denied:
                 return condition::parse_error;
             default:
                 return {ev, *this};

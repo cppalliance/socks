@@ -57,6 +57,39 @@ public:
         }};
     }
 
+    template <
+        class ConstBufferSequence,
+        typename std::enable_if<
+            asio::is_const_buffer_sequence<
+                ConstBufferSequence
+                >::value,
+            int>::type = 0
+        >
+    static
+    void
+    checkEndpoint(
+        ConstBufferSequence const& reply,
+        string_view user,
+        error_code exp_ec,
+        std::size_t fail_at = 0,
+        error_code fail_with = {},
+        endpoint const& ep = {
+            asio::ip::make_address_v4(
+                asio::ip::address_v4::uint_type(0)),
+                0})
+    {
+        io_context ioc;
+        test::stream s(ioc, fail_at, fail_with);
+        s.reset_read(reply);
+        error_code ec;
+        endpoint app_ep = connect_v4(s, ep, user, ec);
+        auto buf = make_request(ep, user);
+        BOOST_TEST(s.equal_write_buffers(asio::buffer(buf)));
+        BOOST_TEST_EQ(app_ep.address().to_v4(),
+                      asio::ip::make_address_v4("0.0.0.0"));
+        BOOST_TEST_EQ(ec, exp_ec);
+    };
+
     template <std::size_t N>
     static
     void
@@ -71,17 +104,14 @@ public:
                 asio::ip::address_v4::uint_type(0)),
                 0})
     {
-        io_context ioc;
-        test::stream s(ioc, fail_at, fail_with);
-        s.reset_read(reply.data(), reply.size());
-        error_code ec;
-        endpoint app_ep = connect_v4(s, ep, user, ec);
-        auto buf = make_request(ep, user);
-        BOOST_TEST(s.equal_write_buffers(asio::buffer(buf)));
-        BOOST_TEST_EQ(app_ep.address().to_v4(),
-                      asio::ip::make_address_v4("0.0.0.0"));
-        BOOST_TEST_EQ(ec, exp_ec);
-    };
+        checkEndpoint(
+            asio::buffer(reply),
+            user,
+            exp_ec,
+            fail_at,
+            fail_with,
+            ep);
+    }
 
     static
     void
@@ -180,6 +210,41 @@ public:
         }
     }
 
+    template <
+        class ConstBufferSequence,
+        typename std::enable_if<
+            asio::is_const_buffer_sequence<
+                ConstBufferSequence
+                >::value,
+            int>::type = 0
+        >
+    static
+    void
+    checkAsyncEndpoint(
+        ConstBufferSequence const& reply,
+        string_view user,
+        error_code exp_ec,
+        std::size_t fail_at = 0,
+        error_code fail_with = {},
+        endpoint const& ep = {
+            asio::ip::make_address_v4(
+                asio::ip::address_v4::uint_type(0)),
+                0})
+    {
+        io_context ioc;
+        test::stream s(ioc, fail_at, fail_with);
+        s.reset_read(reply);
+        async_connect_v4(s, ep, user, [&](
+            error_code ec, endpoint app_ep)
+        {
+            auto buf = make_request(ep, user);
+            BOOST_TEST(s.equal_write_buffers(asio::buffer(buf)));
+            BOOST_TEST_EQ(app_ep, ep);
+            BOOST_TEST_EQ(ec, exp_ec);
+        });
+        ioc.run();
+    };
+
     template <std::size_t N>
     static
     void
@@ -194,19 +259,15 @@ public:
                 asio::ip::address_v4::uint_type(0)),
                 0})
     {
-        io_context ioc;
-        test::stream s(ioc, fail_at, fail_with);
-        s.reset_read(reply.data(), reply.size());
-        async_connect_v4(s, ep, user, [&](
-            error_code ec, endpoint app_ep)
-        {
-            auto buf = make_request(ep, user);
-            BOOST_TEST(s.equal_write_buffers(asio::buffer(buf)));
-            BOOST_TEST_EQ(app_ep, ep);
-            BOOST_TEST_EQ(ec, exp_ec);
-        });
-        ioc.run();
-    };
+        checkAsyncEndpoint(
+            asio::buffer(reply),
+            user,
+            exp_ec,
+            fail_at,
+            fail_with,
+            ep);
+    }
+
 
     static
     void

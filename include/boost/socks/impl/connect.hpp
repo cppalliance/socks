@@ -27,6 +27,7 @@
 
 #include <boost/core/allocator_access.hpp>
 #include <boost/core/empty_value.hpp>
+#include <boost/core/ignore_unused.hpp>
 
 #include <iostream>
 
@@ -149,26 +150,85 @@ authenticate(
     // Send a GREETING request
     // Create a list with only opt as a method
     // accepted by the client
-    n = prepare_greeting(buffer, n, opt);
-    BOOST_ASSERT(n > 2);
+    std::size_t gn = prepare_greeting(buffer, n, opt);
+    BOOST_ASSERT(gn > 2);
+    ignore_unused(gn);
     asio::write(
         stream,
-        asio::buffer(buffer, n),
+        asio::buffer(buffer, gn),
         ec);
     if (ec.failed())
         return 0;
 
     // Read GREETING reply (or "server choice")
-    n = asio::read(
+    std::size_t rn = asio::read(
         stream,
         asio::buffer(buffer, 2),
         ec);
     if (!ec.failed() ||
         ec == asio::error::eof)
-        validate_server_choice(buffer, n, opt, ec);
+        validate_server_choice(buffer, rn, opt, ec);
+    if (ec.failed())
+        return buffer[1];
 
-    // AFREITAS Implement sync sub-negotiation
-    // This is ignoring the server methods
+    // Only user/pass is supported here
+    unsigned char choice = buffer[1];
+    if (choice == static_cast<unsigned char>(
+            auth_method::userpass))
+    {
+        // Send a User/pass request
+        BOOST_ASSERT(opt.user.size() <= 255);
+        BOOST_ASSERT(opt.pass.size() <= 255);
+        std::size_t n2 =
+            opt.user.size() + opt.pass.size() + 3;
+        BOOST_ASSERT(n >= n2);
+        // VER
+        buffer[0] = 0x01;
+        // IDLEN
+        buffer[1] = static_cast<unsigned char>(
+            opt.user.size());
+        // ID
+        std::size_t i = 2;
+        for (auto c: opt.user)
+            buffer[i++] = static_cast<unsigned char>(c);
+        // PWLEN
+        buffer[i++] = static_cast<unsigned char>(
+            opt.user.size());
+        // PW
+        for (auto c: opt.pass)
+            buffer[i++] = static_cast<unsigned char>(c);
+        BOOST_ASSERT(i == n2);
+        asio::write(
+            stream,
+            asio::buffer(buffer, n2),
+            ec);
+        if (ec.failed())
+            return 0;
+
+        // Read User/pass reply
+        n = asio::read(
+            stream,
+            asio::buffer(buffer, 2),
+            ec);
+        if (ec.failed() &&
+            ec != asio::error::eof)
+            return 0;
+        if (n != 2)
+        {
+            ec = error::bad_reply_size;
+            return 0;
+        }
+        if (buffer[0] != 0x01)
+        {
+            ec = error::bad_reply_version;
+            return 0;
+        }
+        if (buffer[1] != 0x00)
+        {
+            ec = error::access_denied;
+            return 0;
+        }
+    }
 
     return buffer[1];
 }
@@ -441,19 +501,19 @@ connect(
     auth_options const& opt,
     error_code& ec)
 {
-    unsigned char buffer[263];
+    unsigned char buffer[513];
     detail::authenticate(
-        stream, buffer, 263, opt, ec);
+        stream, buffer, 513, opt, ec);
     if (ec.failed())
         return {};
 
     detail::write_connect_request(
-        stream, buffer, 263, target_host, ec);
+        stream, buffer, 513, target_host, ec);
     if (ec.failed())
         return {};
 
     auto ep = detail::read_connect_reply(
-        stream, buffer, 263, ec);
+        stream, buffer, 513, ec);
     return ep;
 }
 
@@ -466,9 +526,9 @@ connect(
     auth_options const& opt,
     error_code& ec)
 {
-    unsigned char buffer[263];
+    unsigned char buffer[513];
     detail::authenticate(
-        stream, buffer, 263, opt, ec);
+        stream, buffer, 513, opt, ec);
     if (ec.failed())
         return {};
 
@@ -476,12 +536,12 @@ connect(
     target.domain = target_host;
     target.port = target_port;
     detail::write_connect_request(
-        stream, buffer, 263, target, ec);
+        stream, buffer, 513, target, ec);
     if (ec.failed())
         return {};
 
     auto ep = detail::read_connect_reply(
-        stream, buffer, 263, ec);
+        stream, buffer, 513, ec);
     if (ec.failed())
         return {};
     return ep;

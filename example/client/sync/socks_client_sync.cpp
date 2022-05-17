@@ -57,7 +57,7 @@ to_string(std::uint16_t v)
 }
 
 endpoint
-connect_v4(
+resolve_and_connect_v4(
     asio::ip::tcp::socket& stream,
     string_view target_host,
     std::uint16_t target_port,
@@ -66,7 +66,7 @@ connect_v4(
 {
     // SOCKS4 does not support domain names.
     // The domain name needs to be resolved
-    // on the client.
+    // on the client with our own resolver.
     asio::ip::tcp::resolver resolver{stream.get_executor()};
     asio::ip::tcp::resolver::results_type endpoints =
         resolver.resolve(
@@ -265,7 +265,7 @@ socks_request(
     {
         if (target.host_type() == urls::host_type::name)
         {
-            connect_v4(
+            resolve_and_connect_v4(
                 socket,
                 target.encoded_host(),
                 default_port(target),

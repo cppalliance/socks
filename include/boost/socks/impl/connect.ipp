@@ -150,7 +150,7 @@ prepare_request(
     // ATYP + DST. ADDR + DSTPORT
     write_target_host(&buffer[3], target_host);
 
-    return n_dst_addr;
+    return n_dst_addr + 6;
 }
 
 std::size_t
@@ -168,7 +168,7 @@ prepare_request(
     // ATYP + DST. ADDR + DSTPORT
     write_target_host(&buffer[3], target_host);
 
-    return n_dst_addr;
+    return n_dst_addr + 6;
 }
 
 endpoint

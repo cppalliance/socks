@@ -30,7 +30,8 @@ public:
 
     static
     std::vector<unsigned char>
-    make_greeting(auth_options const& opt)
+    make_greeting(
+        auth_options const& opt = auth_options::none{})
     {
         std::vector<unsigned char> r(4);
         std::size_t n =
@@ -41,7 +42,7 @@ public:
     }
 
     static
-    std::array<unsigned char, 2>
+    std::vector<unsigned char>
     make_greet_reply(
         auth_method m = auth_method::no_authentication)
     {
@@ -50,7 +51,11 @@ public:
 
     static
     std::vector<unsigned char>
-    make_request(endpoint const& ep)
+    make_request(
+        endpoint const& ep = {
+            asio::ip::make_address_v4(
+                asio::ip::address_v4::uint_type(0)),
+                0})
     {
         std::vector<unsigned char> r(22);
         std::size_t n =
@@ -73,7 +78,7 @@ public:
     }
 
     static
-    std::array<unsigned char, 10>
+    std::vector<unsigned char>
     make_reply(reply_code r = reply_code::succeeded)
     {
         return {{
@@ -90,7 +95,7 @@ public:
     }
 
     static
-    std::array<unsigned char, 8>
+    std::vector<unsigned char>
     make_reply_incomplete(reply_code r = reply_code::succeeded)
     {
         return {{
@@ -105,7 +110,7 @@ public:
     }
 
     static
-    std::array<unsigned char, 22>
+    std::vector<unsigned char>
     make_reply_ipv6(
         reply_code r = reply_code::succeeded)
     {
@@ -122,7 +127,7 @@ public:
     }
 
     static
-    std::array<unsigned char, 20>
+    std::vector<unsigned char>
     make_reply_ipv6_incomplete(
         reply_code r = reply_code::succeeded)
     {
@@ -139,7 +144,7 @@ public:
     }
 
     static
-    std::array<unsigned char, 22>
+    std::vector<unsigned char>
     make_reply_unknown(
         reply_code r = reply_code::succeeded)
     {
@@ -155,12 +160,19 @@ public:
              0x00, 0x00}};
     }
 
-    template <std::size_t N1, std::size_t N2>
+    template <
+        class ConstBufferSequence,
+        typename std::enable_if<
+            asio::is_const_buffer_sequence<
+                ConstBufferSequence
+                >::value,
+            int>::type = 0
+        >
     static
     void
     checkEndpoint(
-        std::array<unsigned char, N1> const& greet_reply,
-        std::array<unsigned char, N2> const& reply,
+        ConstBufferSequence const& requests,
+        ConstBufferSequence const& replies,
         auth_options const& auth,
         error_code exp_ec,
         std::size_t fail_at = 0,
@@ -171,26 +183,48 @@ public:
                 0})
     {
         io_context ioc;
-        // Mock proxy response
         test::stream s(ioc, fail_at, fail_with);
-        s.reset_read(greet_reply.data(), greet_reply.size());
-        s.append_read(reply.data(), reply.size());
-        // Connect to proxy server
+        s.reset_read(replies);
         error_code ec;
         endpoint app_ep = connect(s, ep, auth, ec);
-        // Compare to expected write values
-        if (!ec.failed())
-        {
-            auto buf1 = make_greeting(auth);
-            auto buf2 = make_request(ep);
-            BOOST_TEST(s.equal_write_buffers(
-                std::array<asio::const_buffer, 2>{
-                    asio::buffer(buf1),
-                    asio::buffer(buf2) }));
-        }
+        BOOST_TEST(s.equal_write_buffers(requests));
         BOOST_TEST_EQ(app_ep, ep);
         BOOST_TEST_EQ(ec, exp_ec);
     };
+
+    static
+    void
+    checkEndpoint(
+        std::initializer_list<
+            std::vector<unsigned char>> const& request,
+        std::initializer_list<
+            std::vector<unsigned char>> const& reply,
+        auth_options const& auth,
+        error_code exp_ec,
+        std::size_t fail_at = 0,
+        error_code fail_with = {},
+        endpoint const& ep = {
+            asio::ip::make_address_v4(
+                asio::ip::address_v4::uint_type(0)),
+                0})
+    {
+        std::vector<asio::const_buffer> request_buf;
+        for (const auto &r: request)
+            request_buf.emplace_back(asio::buffer(r));
+
+        std::vector<asio::const_buffer> reply_buf;
+        for (const auto &r: reply)
+            reply_buf.emplace_back(asio::buffer(r));
+        checkEndpoint(
+            request_buf,
+            reply_buf,
+            auth,
+            exp_ec,
+            fail_at,
+            fail_with,
+            ep
+        );
+    }
 
     static
     void
@@ -200,19 +234,30 @@ public:
         {
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
-                make_greet_reply(),
-                make_reply(),
+                {make_greeting(), make_request()},
+                {make_greet_reply(), make_reply()},
                 auth_options::none{},
                 error::succeeded);
         }
 
         // user
         {
+            auth_options a =
+                auth_options::userpass{
+                    "user", "pass"};
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
-                make_greet_reply(
-                    auth_method::userpass),
-                make_reply(),
+                {
+                    make_greeting(a),
+                    {0x01, 0x04, 'u', 's', 'e', 'r', 0x04, 'p', 'a', 's', 's'},
+                    make_request()
+                },
+                {
+                    make_greet_reply(
+                        auth_method::userpass),
+                    {0x01, 0x00},
+                    make_reply()
+                },
                 auth_options::userpass{"user", "pass"},
                 error::succeeded);
         }
@@ -224,8 +269,8 @@ public:
             endpoint ep(asio::ip::make_address_v6(bytes), 0);
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
-                make_greet_reply(),
-                make_reply_ipv6(),
+                {make_greeting(), make_request(ep)},
+                {make_greet_reply(), make_reply_ipv6()},
                 auth_options::none{},
                 error::succeeded,
                 0,
@@ -241,8 +286,8 @@ public:
                 address_type::ip_v4);
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
-                make_greet_reply(),
-                reply,
+                {make_greeting(), make_request()},
+                {make_greet_reply(), reply},
                 auth_options::none{},
                 error::bad_reply_size
             );
@@ -255,8 +300,8 @@ public:
                 address_type::ip_v6);
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
-                make_greet_reply(),
-                reply,
+                {make_greeting(), make_request()},
+                {make_greet_reply(), reply},
                 auth_options::none{},
                 error::bad_reply_size
             );
@@ -268,8 +313,8 @@ public:
             g[0] = 0x04;
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
-                g,
-                make_reply(),
+                {make_greeting()},
+                {g},
                 auth_options::none{},
                 error::bad_reply_version,
                 0,
@@ -283,8 +328,8 @@ public:
             g[1] = 0xEF;
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
-                g,
-                make_reply(),
+                {make_greeting()},
+                {g},
                 auth_options::none{},
                 error::bad_server_choice,
                 0,
@@ -296,8 +341,8 @@ public:
         {
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
-                std::array<unsigned char, 1>{{0x05}},
-                std::array<unsigned char, 0>{{}},
+                {make_greeting()},
+                {{0x05}},
                 auth_options::none{},
                 error::bad_reply_size,
                 0,
@@ -309,8 +354,8 @@ public:
         {
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
-                make_greet_reply(),
-                make_reply_incomplete(),
+                {make_greeting(), make_request()},
+                {make_greet_reply(), make_reply_incomplete()},
                 auth_options::none{},
                 error::bad_reply_size,
                 0,
@@ -322,8 +367,8 @@ public:
         {
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
-                make_greet_reply(),
-                make_reply_ipv6_incomplete(),
+                {make_greeting(), make_request()},
+                {make_greet_reply(), make_reply_ipv6_incomplete()},
                 auth_options::none{},
                 error::bad_reply_size,
                 0,
@@ -335,8 +380,8 @@ public:
         {
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
-                make_greet_reply(),
-                make_reply_unknown(),
+                {make_greeting(), make_request()},
+                {make_greet_reply(), make_reply_unknown()},
                 auth_options::none{},
                 error::bad_address_type,
                 0,
@@ -348,8 +393,8 @@ public:
         {
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
-                make_greet_reply(),
-                make_reply(static_cast<reply_code>(0xEF)),
+                {make_greeting(), make_request()},
+                {make_greet_reply(), make_reply(static_cast<reply_code>(0xEF))},
                 auth_options::none{},
                 error::unassigned_reply_code,
                 0,
@@ -476,8 +521,8 @@ public:
         {
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
-                make_greet_reply(),
-                std::array<unsigned char, 1>{{0x05}},
+                {make_greeting(), make_request()},
+                {make_greet_reply(), {{0x05}}},
                 auth_options::none{},
                 error::bad_reply_size);
         }
@@ -489,8 +534,8 @@ public:
             r[0] = 0x04;
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
-                make_greet_reply(),
-                r,
+                {make_greeting(), make_request()},
+                {make_greet_reply(), r},
                 auth_options::none{},
                 error::bad_reply_version);
         }
@@ -499,9 +544,12 @@ public:
         {
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
-                make_greet_reply(),
-                make_reply(
-                    reply_code::general_failure),
+                {make_greeting(), make_request()},
+                {
+                    make_greet_reply(),
+                    make_reply(
+                        reply_code::general_failure)
+                },
                 auth_options::none{},
                 error::general_failure);
         }
@@ -510,11 +558,15 @@ public:
         {
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
-                make_greet_reply(),
-                std::array<unsigned char, 2>{{
-                     0x05,
-                     static_cast<unsigned char>(
-                     reply_code::succeeded)}},
+                {make_greeting(), make_request()},
+                {
+                    make_greet_reply(),
+                    {
+                        0x05,
+                        static_cast<unsigned char>(
+                            reply_code::succeeded)
+                    }
+                },
                 auth_options::none{},
                 error::bad_reply_size);
         }
@@ -523,8 +575,8 @@ public:
         {
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
-                std::array<unsigned char, 0>{{}},
-                std::array<unsigned char, 0>{{}},
+                {make_greeting()},
+                {{}, {}},
                 auth_options::none{},
                 error::general_failure,
                 0,
@@ -535,8 +587,8 @@ public:
         {
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
-                std::array<unsigned char, 0>{{}},
-                std::array<unsigned char, 0>{{}},
+                {make_greeting()},
+                {{}, {}},
                 auth_options::none{},
                 error::general_failure,
                 1,
@@ -547,8 +599,8 @@ public:
         {
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
-                make_greet_reply(),
-                std::array<unsigned char, 0>{{}},
+                {make_greeting(), make_request()},
+                {make_greet_reply(), {}},
                 auth_options::none{},
                 error::general_failure,
                 2,
@@ -559,8 +611,8 @@ public:
         {
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
-                make_greet_reply(),
-                make_reply(),
+                {make_greeting(), make_request()},
+                {make_greet_reply(), make_reply()},
                 auth_options::none{},
                 error::general_failure,
                 3,
@@ -568,12 +620,11 @@ public:
         }
     }
 
-    template <std::size_t N1, std::size_t N2>
     static
     void
     checkAsyncEndpoint(
-        std::array<unsigned char, N1> greet_reply,
-        std::array<unsigned char, N2> reply,
+        std::vector<unsigned char> const& greet_reply,
+        std::vector<unsigned char> const& reply,
         auth_options const& auth,
         error_code exp_ec,
         std::size_t fail_at = 0,
@@ -637,7 +688,7 @@ public:
             BOOST_TEST_CHECKPOINT();
             checkAsyncEndpoint(
                 make_greet_reply(),
-                std::array<unsigned char, 1>{{0x05}},
+                {{0x05}},
                 auth_options::none{},
                 error::bad_reply_size);
         }
@@ -671,7 +722,7 @@ public:
             BOOST_TEST_CHECKPOINT();
             checkAsyncEndpoint(
                 make_greet_reply(),
-                std::array<unsigned char, 3>{{
+                {{
                     0x05, // VER
                     static_cast<unsigned char>(
                         reply_code::succeeded), // REP
@@ -685,8 +736,8 @@ public:
         {
             BOOST_TEST_CHECKPOINT();
             checkAsyncEndpoint(
-                std::array<unsigned char, 0>{{}},
-                std::array<unsigned char, 0>{{}},
+                {{}},
+                {{}},
                 auth_options::none{},
                 error::general_failure,
                 0,
@@ -698,7 +749,7 @@ public:
             BOOST_TEST_CHECKPOINT();
             checkAsyncEndpoint(
                 make_greet_reply(),
-                std::array<unsigned char, 0>{{}},
+                {{}},
                 auth_options::none{},
                 error::general_failure,
                 1,
@@ -710,7 +761,7 @@ public:
             BOOST_TEST_CHECKPOINT();
             checkAsyncEndpoint(
                 make_greet_reply(),
-                std::array<unsigned char, 0>{{}},
+                {{}},
                 auth_options::none{},
                 error::general_failure,
                 2,

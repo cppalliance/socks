@@ -92,7 +92,7 @@ enum class error
     //----------------------------------
 
     //
-    // Client errors
+    // Communication errors
     //
 
     /// Bad reply size
@@ -112,6 +112,9 @@ enum class error
 
     /// Bad address type
     bad_address_type,
+
+    /// Access denied
+    access_denied,
 
 
     //----------------------------------

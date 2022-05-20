@@ -64,6 +64,28 @@ function(boost_socks_setup_properties target)
     if (MINGW)
         target_link_libraries(${target} PUBLIC ws2_32 mswsock)
     endif()
+
+    if (WIN32 AND CMAKE_SYSTEM_VERSION)
+        # Get windows version major and minor
+        set(WIN_VERSION ${CMAKE_SYSTEM_VERSION})
+        string(REGEX MATCH "^([0-9]+).([0-9])" WIN_VERSION ${WIN_VERSION})
+        # Convert to HEX
+        string(REGEX MATCH "^([0-9]+)" WIN_VERSION_MAJOR ${WIN_VERSION})
+        if ("${WIN_VERSION_MAJOR}" MATCHES "10")
+            set(WIN_VERSION_MAJOR "A")
+            string(REGEX REPLACE "^([0-9]+)" ${WIN_VERSION_MAJOR} WIN_VERSION ${WIN_VERSION})
+        elseif ("${WIN_VERSION_MAJOR}" MATCHES "11")
+            set(WIN_VERSION_MAJOR "B")
+            string(REGEX REPLACE "^([0-9]+)" ${WIN_VERSION_MAJOR} WIN_VERSION ${WIN_VERSION})
+        endif()
+        # Prepend single digits with 0
+        string(REGEX REPLACE "^([0-9A-Z])\\." "0\\1." WIN_VERSION ${WIN_VERSION})
+        string(REGEX REPLACE "([^0-9A-Z])([0-9A-Z])" "\\10\\2" WIN_VERSION ${WIN_VERSION})
+        # Erase "."
+        string(REPLACE "." "" WIN_VERSION ${WIN_VERSION})
+        set(WIN32_WINNT_VALUE "0x${WIN_VERSION}")
+        target_compile_definitions(${target} PUBLIC -D_WIN32_WINNT=${WIN32_WINNT_VALUE})
+    endif()
 endfunction()
 
 file(GLOB_RECURSE BOOST_SOCKS_HEADERS CONFIGURE_DEPENDS

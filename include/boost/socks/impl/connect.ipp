@@ -59,6 +59,50 @@ prepare_greeting(
         return prepare_greeting(buffer, n, {0x00});
 }
 
+std::size_t
+prepare_userpass_request(
+    unsigned char* buffer,
+    std::size_t n,
+    auth_options const& opt)
+{
+    BOOST_ASSERT(opt.user.size() <= 255);
+    BOOST_ASSERT(opt.pass.size() <= 255);
+    std::size_t n2 =
+        opt.user.size() + opt.pass.size() + 3;
+    BOOST_ASSERT(n >= n2);
+    // VER
+    buffer[0] = 0x01;
+    // IDLEN
+    buffer[1] = static_cast<unsigned char>(
+        opt.user.size());
+    // ID
+    std::size_t i = 2;
+    for (auto c: opt.user)
+        buffer[i++] = static_cast<unsigned char>(c);
+    // PWLEN
+    buffer[i++] = static_cast<unsigned char>(
+        opt.user.size());
+    // PW
+    for (auto c: opt.pass)
+        buffer[i++] = static_cast<unsigned char>(c);
+    BOOST_ASSERT(i == n2);
+    return n2;
+}
+
+void
+validate_userpass_reply(
+    unsigned char const* buffer,
+    std::size_t n,
+    error_code& ec)
+{
+    if (n != 2)
+        ec = error::bad_reply_size;
+    else if (buffer[0] != 0x01)
+        ec = error::bad_reply_version;
+    else if (buffer[1] != 0x00)
+        ec = error::access_denied;
+}
+
 void
 write_ver_cmd_rsv(
     unsigned char* buffer)

@@ -69,6 +69,20 @@ prepare_greeting(
     std::size_t n,
     auth_options const& opt);
 
+BOOST_SOCKS_DECL
+std::size_t
+prepare_userpass_request(
+    unsigned char* buffer,
+    std::size_t n,
+    auth_options const& opt);
+
+BOOST_SOCKS_DECL
+void
+validate_userpass_reply(
+    unsigned char const* buffer,
+    std::size_t n,
+    error_code& ec);
+
 inline
 std::size_t
 dst_addr_size(
@@ -152,7 +166,6 @@ authenticate(
     // accepted by the client
     std::size_t gn = prepare_greeting(buffer, n, opt);
     BOOST_ASSERT(gn > 2);
-    ignore_unused(gn);
     asio::write(
         stream,
         asio::buffer(buffer, gn),
@@ -171,65 +184,26 @@ authenticate(
     if (ec.failed())
         return buffer[1];
 
-    // Only user/pass is supported here
+    // Only user/pass is supported
     unsigned char choice = buffer[1];
     if (choice == static_cast<unsigned char>(
             auth_method::userpass))
     {
         // Send a User/pass request
-        BOOST_ASSERT(opt.user.size() <= 255);
-        BOOST_ASSERT(opt.pass.size() <= 255);
-        std::size_t n2 =
-            opt.user.size() + opt.pass.size() + 3;
-        BOOST_ASSERT(n >= n2);
-        // VER
-        buffer[0] = 0x01;
-        // IDLEN
-        buffer[1] = static_cast<unsigned char>(
-            opt.user.size());
-        // ID
-        std::size_t i = 2;
-        for (auto c: opt.user)
-            buffer[i++] = static_cast<unsigned char>(c);
-        // PWLEN
-        buffer[i++] = static_cast<unsigned char>(
-            opt.user.size());
-        // PW
-        for (auto c: opt.pass)
-            buffer[i++] = static_cast<unsigned char>(c);
-        BOOST_ASSERT(i == n2);
+        std::size_t n2 = prepare_userpass_request(
+            buffer, n, opt);
         asio::write(
-            stream,
-            asio::buffer(buffer, n2),
-            ec);
+            stream, asio::buffer(buffer, n2), ec);
         if (ec.failed())
             return 0;
 
         // Read User/pass reply
         n = asio::read(
-            stream,
-            asio::buffer(buffer, 2),
-            ec);
-        if (ec.failed() &&
-            ec != asio::error::eof)
-            return 0;
-        if (n != 2)
-        {
-            ec = error::bad_reply_size;
-            return 0;
-        }
-        if (buffer[0] != 0x01)
-        {
-            ec = error::bad_reply_version;
-            return 0;
-        }
-        if (buffer[1] != 0x00)
-        {
-            ec = error::access_denied;
-            return 0;
-        }
+            stream, asio::buffer(buffer, 2), ec);
+        if (!ec.failed() ||
+            ec == asio::error::eof)
+            validate_userpass_reply(buffer, n, ec);
     }
-
     return buffer[1];
 }
 
@@ -338,9 +312,9 @@ public:
         Allocator const& a)
         : empty_value<Allocator, 0>(empty_init, a)
         , s_(s)
-        , buf_(263, 0x00, a)
+        , buf_(513, 0x00, a)
         , target_(target_host)
-        , opt_(std::move(opt))
+        , opt_(opt)
     {}
 
     template <typename Self>
@@ -363,12 +337,12 @@ public:
             BOOST_ASIO_CORO_YIELD
             asio::async_write(
                 s_,
-                asio::buffer(buf_, n),
+                asio::buffer(buf_.data(), n),
                 std::move(self));
             if (ec.failed())
                 goto complete;
 
-            // Read GREETING reply
+            // Read GREETING reply (or "server choice")
             BOOST_ASIO_HANDLER_LOCATION((
                 __FILE__, __LINE__,
                 "asio::async_read"));
@@ -384,8 +358,38 @@ public:
             if (ec.failed())
                 goto complete;
 
-            // AFREITAS Implement sub-negotiation
-            // This is ignoring the server method
+            // Only user/pass is supported
+            if (buf_[1] == static_cast<unsigned char>(
+                    auth_method::userpass))
+            {
+                // Send a user/pass request
+                n = prepare_userpass_request(
+                    buf_.data(), buf_.size(), opt_);
+                BOOST_ASIO_HANDLER_LOCATION((
+                    __FILE__, __LINE__,
+                    "asio::async_write"));
+                BOOST_ASIO_CORO_YIELD
+                asio::async_write(
+                    s_,
+                    asio::buffer(buf_.data(), n),
+                    std::move(self));
+                if (ec.failed())
+                    goto complete;
+
+                // Read User/pass reply
+                BOOST_ASIO_HANDLER_LOCATION((
+                    __FILE__, __LINE__,
+                    "asio::async_read"));
+                BOOST_ASIO_CORO_YIELD
+                asio::async_read(
+                    s_,
+                    asio::buffer(buf_.data(), 2),
+                    std::move(self));
+                validate_userpass_reply(buf_.data(), n, ec);
+                if (ec.failed() &&
+                    ec != asio::error::eof)
+                    goto complete;
+            }
 
             // Send the CONNECT request
             n = prepare_request(

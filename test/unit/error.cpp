@@ -55,12 +55,13 @@ public:
         check(condition::reply_error, error::cannot_connect_to_identd_on_the_client);
         check(condition::reply_error, error::client_and_identd_report_different_user_ids);
         check(condition::reply_error, error::unassigned_reply_code);
-        check(condition::parse_error, error::bad_reply_size);
-        check(condition::parse_error, error::bad_reply_version);
-        check(condition::parse_error, error::bad_server_choice);
-        check(condition::parse_error, error::bad_reply_command);
-        check(condition::parse_error, error::bad_reserved_component);
-        check(condition::parse_error, error::bad_address_type);
+        check(condition::io_error, error::bad_reply_size);
+        check(condition::io_error, error::bad_reply_version);
+        check(condition::io_error, error::bad_server_choice);
+        check(condition::io_error, error::bad_reply_command);
+        check(condition::io_error, error::bad_reserved_component);
+        check(condition::io_error, error::bad_address_type);
+        check(condition::io_error, error::access_denied);
         check(condition::reply_error, error::unassigned_reply_code);
 
         error_code ec = static_cast<error>(0xEF);

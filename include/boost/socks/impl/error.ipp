@@ -87,7 +87,7 @@ make_error_code(error e)
             case error::bad_reserved_component:
             case error::bad_address_type:
             case error::access_denied:
-                return condition::parse_error;
+                return condition::io_error;
             default:
                 return {ev, *this};
             }
@@ -125,8 +125,8 @@ make_error_condition(condition c)
                 return "SOCKS reply successful";
             case condition::reply_error:
                 return "SOCKS reply with error";
-            case condition::parse_error:
-                return "Cannot parse a request or reply";
+            case condition::io_error:
+                return "I/O error";
             default:
                 return "Unassigned";
             }

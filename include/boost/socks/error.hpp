@@ -139,7 +139,7 @@ enum class condition
     reply_error,
 
     /// Cannot parse a request or reply
-    parse_error,
+    io_error,
 };
 
 } // socks

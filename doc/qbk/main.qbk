@@ -77,6 +77,7 @@
 
 [import ../../example/client/sync/socks_client_sync.cpp]
 [import ../../example/client/async/socks_client_async.cpp]
+[import ../../example/server/async/socks_server_async.cpp]
 [import ../../test/unit/snippets.cpp]
 
 [/-----------------------------------------------------------------------------]
@@ -114,6 +115,16 @@ TODO
 [include greeting.qbk]
 [include authentication.qbk]
 [include requests_and_replies.qbk]
+[endsect]
+
+[section Examples]
+[section:async_server Async SOCKS Server]
+This is a reference implementation of a SOCKS server. It can be used to validate the library functionality:
+
+File: [path_link example/server/async/socks_server_async.cpp socks_server_async.cpp]
+
+[example_socks_server_async]
+[endsect]
 [endsect]
 
 [section:ref Reference]

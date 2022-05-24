@@ -7,12 +7,14 @@
 # Official repository: https://github.com/alandefreitas/socks_proto
 #
 
-exe socks-client-v4-sync :
-    socks_client_sync.cpp
-    /boost/socks//boost_socks
-    /boost/socks//socks_sources
-    /boost/url//boost_url
-    :
-    <variant>coverage:<build>no
-    <variant>ubasan:<build>no
-    ;
+add_executable (socks-server-async
+        socks_server_async.cpp
+        )
+
+target_link_libraries(socks-server-async
+        Boost::asio
+        Boost::beast
+        Boost::url
+        Boost::socks)
+
+set_property(TARGET socks-server-async PROPERTY FOLDER "example-socks-server-async")

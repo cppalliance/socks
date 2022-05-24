@@ -7,12 +7,4 @@
 # Official repository: https://github.com/alandefreitas/socks_proto
 #
 
-exe socks-client-v4-sync :
-    socks_client_sync.cpp
-    /boost/socks//boost_socks
-    /boost/socks//socks_sources
-    /boost/url//boost_url
-    :
-    <variant>coverage:<build>no
-    <variant>ubasan:<build>no
-    ;
+build-project async ;

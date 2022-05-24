@@ -641,7 +641,7 @@ public:
             BOOST_TEST_CHECKPOINT();
             checkEndpoint(
                 {make_greeting(), make_request()},
-                {make_greet_reply(), {{0x05}}},
+                {make_greet_reply(), {0x05}},
                 auth_options::none{},
                 error::bad_reply_size);
         }

@@ -399,7 +399,7 @@ int main(int argc, char** argv)
             "    - <target URL>: Application server URI\n"
             "    - <socks URL>: SOCKS server URI (<socks[4|5]://[[user]:password@]server:port>)\n\n"
             "Example:\n"
-            "    socks_client_sync http://www.example.com:80/ socks5://socks5server.com:1080\n";
+            "    socks_client_async http://www.example.com:80/ socks5://socks5server.com:1080\n";
         return EXIT_FAILURE;
     }
 

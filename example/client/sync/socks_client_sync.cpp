@@ -175,7 +175,7 @@ socks_request(
     if (!r.has_value())
         return fail(r.error(), "Parse SOCKS");
     urls::url_view socks = r.value();
-    unsigned char socks_version = 0x00;
+    unsigned char socks_version;
     if (socks.scheme() == "socks5")
         socks_version = 0x05;
     else if (socks.scheme() == "socks4" ||

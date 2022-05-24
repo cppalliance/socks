@@ -81,12 +81,40 @@ public:
             asio::buffer(buffer_),
             [this](const error_code& ec, std::size_t n)
             {
-                // Greeting
-                // VER / NMETHODS / METHODS
                 // Stop reading at invalid version
                 if (ec.failed()
-                    || (n > 0 && buffer_[0] != 0x05))
+                    || (n > 0 &&
+                        buffer_[0] != 0x05
+                        && buffer_[0] != 0x04))
                     return std::size_t(0);
+
+                // SOCKS4 Connect
+                // - VER | CMD | DSTPORT | DSTIP | USERID | NULLs
+                if (buffer_[0] == 0x04)
+                {
+                    // USERID ends with NULL
+                    // We read from until we find a NULL,
+                    // with a limit of buffer_.size()
+                    // which means a username of
+                    // up to 250 chars
+                    const std::size_t maxn = buffer_.size();
+                    // Check CMD
+                    if (n >= 1 && buffer_[1] != 0x01)
+                        return std::size_t(0);
+                    // Anything is valid for the next
+                    // 6 bytes DSTPORT | DSTIP, so we
+                    // look for NULL after buffer_[8]
+                    // to stop reading
+                    if (n >= 9)
+                        for (std::size_t i = 8; i < n; ++i)
+                            if (buffer_[i] == 0x00)
+                                return std::size_t(0);
+                    // Keep allowing the max otherwise
+                    return maxn - n;
+                }
+
+                // SOCKS5 Greeting
+                // - VER / NMETHODS / METHODS
                 // Read all methods
                 if (n >= 2)
                 {
@@ -107,7 +135,10 @@ public:
                 if (!ec.failed())
                 {
                     buffer_.resize(n);
-                    return parse_socks_greeting();
+                    if (buffer_[0] == 0x05)
+                        return parse_socks_greeting();
+                    else if (buffer_[0] == 0x04)
+                        return parse_socks_connect_v4();
                 }
                 fail(ec, "Failure to read SOCKS greeting");
             }
@@ -369,7 +400,7 @@ private:
         {
             fail(
                 asio::error::no_protocol_option,
-                "Bad userpass version");
+                "Bad SOCKS request version");
             // connection not allowed by ruleset
             return do_connect_reply(0x02);
         }
@@ -520,6 +551,68 @@ private:
     }
 
     void
+    parse_socks_connect_v4()
+    {
+        // VER | CMD | DSTPORT | DSTIP | USERID | NULL
+        if (buffer_.empty())
+            return fail(
+                asio::error::message_size,
+                "Empty SOCKS connect");
+        if (buffer_[0] != 0x04)
+        {
+            fail(
+                asio::error::no_protocol_option,
+                "Bad request version");
+            // request rejected or failed
+            return do_connect_reply_v4(91);
+        }
+        if (buffer_.size() == 1)
+        {
+            fail(
+                asio::error::message_size,
+                "Missing SOCKS command");
+            // request rejected or failed
+            return do_connect_reply_v4(91);
+        }
+        if (buffer_[1] != 0x01)
+        {
+            fail(
+                asio::error::message_size,
+                "Invalid SOCKS connect command");
+            // request rejected or failed
+            return do_connect_reply_v4(91);
+        }
+        if (buffer_.size() >= 8)
+        {
+            std::uint16_t port = 0;
+            port |= buffer_[2];
+            port <<= 8;
+            port |= buffer_[3];
+            asio::ip::address_v4::bytes_type addr;
+            addr[0] = buffer_[4];
+            addr[1] = buffer_[5];
+            addr[2] = buffer_[6];
+            addr[3] = buffer_[7];
+            auto ip = ip::make_address_v4(addr);
+            target_ = {ip, port};
+            /*
+             * [buffer[8], ...] contain the
+             * ident id, which this server
+             * ignores
+             */
+            return do_target_connect_v4();
+        }
+        else
+        {
+            fail(
+                asio::error::message_size,
+                "Invalid SOCKS ipv4 address");
+            // request rejected or failed
+                return do_connect_reply_v4(91);
+        }
+    }
+
+    void
     do_target_connect()
     {
         auto self(shared_from_this());
@@ -538,6 +631,29 @@ private:
                 }
                 // succeeded
                 do_connect_reply(0x00);
+            }
+        );
+    }
+
+    void
+    do_target_connect_v4()
+    {
+        auto self(shared_from_this());
+        target_socket_.async_connect(
+            target_,
+            [this, self](error_code ec)
+            {
+                if (ec.failed())
+                {
+                    fail(
+                        ec,
+                        "Cannot connect to target",
+                        target_);
+                    // request rejected or failed
+                    return do_connect_reply_v4(91);
+                }
+                // request granted
+                return do_connect_reply_v4(90);
             }
         );
     }
@@ -622,6 +738,73 @@ private:
                         ec, "Cannot write connect reply");
                 unsigned char rep = buffer_[1];
                 if (rep == 0x00)
+                    do_relay();
+                else
+                    socket_.close();
+            }
+        );
+    }
+
+    void
+    do_connect_reply_v4(unsigned char rep)
+    {
+        endpoint bnd_ep =
+            target_socket_.local_endpoint();
+        buffer_.resize(8);
+        // VER
+        buffer_[0] = 0x04;
+        // REP
+        buffer_[1] = rep;
+        if (rep != 90)
+        {
+            // DST.PORT
+            buffer_[2] = 0x00;
+            buffer_[3] = 0x00;
+            // DST.ADDR
+            buffer_[4] = 0x00;
+            buffer_[5] = 0x00;
+            buffer_[6] = 0x00;
+            buffer_[7] = 0x00;
+        }
+        else
+        {
+            // DST.PORT
+            std::uint16_t p = bnd_ep.port();
+            buffer_[2] = (p >> 8) & 0xFF;
+            buffer_[3] = p & 0xFF;
+            // DST.ADDR
+            if (bnd_ep.address().is_v4())
+            {
+                auto bnd_v4 = bnd_ep.address().to_v4();
+                auto bnd_bytes = bnd_v4.to_bytes();
+                buffer_[4] = bnd_bytes[0];
+                buffer_[5] = bnd_bytes[1];
+                buffer_[6] = bnd_bytes[2];
+                buffer_[7] = bnd_bytes[3];
+            }
+            else
+            {
+                buffer_[4] = 0x00;
+                buffer_[5] = 0x00;
+                buffer_[6] = 0x00;
+                buffer_[7] = 0x00;
+            }
+        }
+        auto self(shared_from_this());
+        asio::async_write(
+            socket_,
+            asio::buffer(buffer_),
+            [this, self](error_code ec, std::size_t)
+            {
+                if (ec.failed())
+                    return fail(
+                        ec, "Cannot write connect reply");
+                unsigned char v = buffer_[0];
+                unsigned char rep = buffer_[1];
+                if ((v == 0x05
+                     && rep == 0x00)
+                    || (v == 0x04
+                        && rep == 90))
                     do_relay();
                 else
                     socket_.close();
